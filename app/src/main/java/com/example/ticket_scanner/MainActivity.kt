@@ -147,7 +147,7 @@ fun TicketScannerMainApp() {
                                         if (status == ScanStatus.VALID) 1 else 0,
                                 rejectedCount = scanStats.rejectedCount +
                                         if (status != ScanStatus.VALID) 1 else 0,
-                                isOnline = false
+                                isOnline = true
                             )
                         }
                     }
