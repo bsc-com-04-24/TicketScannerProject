@@ -32,6 +32,7 @@ object QrMessageDecoder {
         // Check whether the message is JSON
         if (message.startsWith("{") && message.endsWith("}")) {
             val fields = mutableMapOf<String, String>()
+
             try {
                 val json = JSONObject(message)
                 val keys = json.keys()
@@ -53,14 +54,19 @@ object QrMessageDecoder {
                     fields
                 )
             } catch (_: Throwable) {
-                // Fallback for JVM unit tests where Android's org.json.JSONObject is an unmocked stub
-                val regex = """"([^"]+)"\s*:\s*"([^"]*)"""".toRegex()
+                // Fallback for JVM unit tests where JSONObject may be
+                // an unmocked Android stub.
+                val regex =
+                    """"([^"]+)"\s*:\s*"([^"]*)"""".toRegex()
+
                 val matches = regex.findAll(message).toList()
+
                 if (matches.isNotEmpty()) {
                     matches.forEach { match ->
-                        val (k, v) = match.destructured
-                        fields[k] = v
+                        val (key, value) = match.destructured
+                        fields[key] = value
                     }
+
                     return DecodedQrMessage(
                         QrMessageType.JSON,
                         message,

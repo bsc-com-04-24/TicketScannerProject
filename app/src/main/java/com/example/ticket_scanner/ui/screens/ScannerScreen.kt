@@ -1,3 +1,4 @@
+
 package com.example.ticket_scanner.ui.screens
 
 import androidx.compose.foundation.Canvas
@@ -28,10 +29,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,9 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +69,23 @@ fun ScannerScreen(
     var isVerifying by remember { mutableStateOf(false) }
     var showManualEntryDialog by remember { mutableStateOf(false) }
     var manualCodeInput by remember { mutableStateOf("") }
+    var showOfflineScreen by remember { mutableStateOf(false) }
+
+    // Show the separate offline UI when requested.
+    if (showOfflineScreen) {
+        OfflineScannerScreen(
+            onBack = {
+                showOfflineScreen = false
+            },
+            onScanTicket = {
+                // Open manual entry instead of pretending to scan
+                // with a camera that has not been connected.
+                showOfflineScreen = false
+                showManualEntryDialog = true
+            }
+        )
+        return
+    }
 
     Box(
         modifier = modifier
@@ -81,17 +98,18 @@ fun ScannerScreen(
                 .padding(bottom = 70.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top Bar
             ScannerTopBar(
                 eventName = "Malawi Music Concert",
                 isOnline = stats.isOnline,
                 isFlashlightOn = isFlashlightOn,
-                onFlashlightToggle = { isFlashlightOn = !isFlashlightOn }
+                onFlashlightToggle = {
+                    isFlashlightOn = !isFlashlightOn
+                }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Stats Cards Row
+            // Ticket statistics
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -104,12 +122,14 @@ fun ScannerScreen(
                     countColor = Color.White,
                     modifier = Modifier.weight(1f)
                 )
+
                 StatCard(
                     title = "Valid",
                     count = stats.validCount,
                     countColor = ValidGreen,
                     modifier = Modifier.weight(1f)
                 )
+
                 StatCard(
                     title = "Rejected",
                     count = stats.rejectedCount,
@@ -120,28 +140,25 @@ fun ScannerScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Scanner Target Viewfinder Frame
+            // Decorative scanner frame.
+            // This does not activate the camera.
             Box(
                 modifier = Modifier
                     .size(260.dp)
                     .clickable {
-                        isVerifying = true
-                        onVerifyTicket("TM-7843-2310")
+                        showManualEntryDialog = true
                     },
                 contentAlignment = Alignment.Center
             ) {
-                // Viewfinder Corner Frame Lines
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val strokeWidth = 5.dp.toPx()
                     val cornerLength = 40.dp.toPx()
                     val cornerRadius = 12.dp.toPx()
-
                     val w = size.width
                     val h = size.height
+                    val frameColor = Color.White
 
-                    val color = Color.White
-
-                    // Top Left Corner
+                    // Top-left corner
                     drawPath(
                         path = androidx.compose.ui.graphics.Path().apply {
                             moveTo(0f, cornerLength)
@@ -149,11 +166,11 @@ fun ScannerScreen(
                             quadraticTo(0f, 0f, cornerRadius, 0f)
                             lineTo(cornerLength, 0f)
                         },
-                        color = color,
+                        color = frameColor,
                         style = Stroke(width = strokeWidth)
                     )
 
-                    // Top Right Corner
+                    // Top-right corner
                     drawPath(
                         path = androidx.compose.ui.graphics.Path().apply {
                             moveTo(w - cornerLength, 0f)
@@ -161,11 +178,11 @@ fun ScannerScreen(
                             quadraticTo(w, 0f, w, cornerRadius)
                             lineTo(w, cornerLength)
                         },
-                        color = color,
+                        color = frameColor,
                         style = Stroke(width = strokeWidth)
                     )
 
-                    // Bottom Left Corner
+                    // Bottom-left corner
                     drawPath(
                         path = androidx.compose.ui.graphics.Path().apply {
                             moveTo(0f, h - cornerLength)
@@ -173,11 +190,11 @@ fun ScannerScreen(
                             quadraticTo(0f, h, cornerRadius, h)
                             lineTo(cornerLength, h)
                         },
-                        color = color,
+                        color = frameColor,
                         style = Stroke(width = strokeWidth)
                     )
 
-                    // Bottom Right Corner
+                    // Bottom-right corner
                     drawPath(
                         path = androidx.compose.ui.graphics.Path().apply {
                             moveTo(w - cornerLength, h)
@@ -185,15 +202,14 @@ fun ScannerScreen(
                             quadraticTo(w, h, w, h - cornerRadius)
                             lineTo(w, h - cornerLength)
                         },
-                        color = color,
+                        color = frameColor,
                         style = Stroke(width = strokeWidth)
                     )
                 }
 
-                // Center Scanner Icon
                 Icon(
                     imageVector = Icons.Default.QrCodeScanner,
-                    contentDescription = "Scan Target",
+                    contentDescription = "Scanner illustration",
                     tint = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.size(54.dp)
                 )
@@ -206,15 +222,16 @@ fun ScannerScreen(
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                lineHeight = 20.sp,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Manual Code Entry Button
+            // Manual ticket entry
             Button(
-                onClick = { showManualEntryDialog = true },
+                onClick = {
+                    showManualEntryDialog = true
+                },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = BluePrimary
                 ),
@@ -232,38 +249,70 @@ fun ScannerScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Navigate to the separate offline UI
+            OutlinedButton(
+                onClick = {
+                    showOfflineScreen = true
+                },
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
+                    .height(52.dp)
+            ) {
+                Text(
+                    text = "Offline Mode",
+                    fontSize = 16.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Bottom Navigation Bar
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
-        // Verifying Overlay State
         if (isVerifying) {
+            LaunchedEffect(isVerifying) {
+                kotlinx.coroutines.delay(700)
+                isVerifying = false
+            }
+
             VerifyingOverlay()
         }
 
-        // Manual Code Entry Dialog
+        // Manual ticket entry dialog
         if (showManualEntryDialog) {
             AlertDialog(
-                onDismissRequest = { showManualEntryDialog = false },
-                title = { Text("Enter Ticket Code") },
+                onDismissRequest = {
+                    showManualEntryDialog = false
+                },
+                title = {
+                    Text("Enter Ticket Code")
+                },
                 text = {
                     Column {
                         Text(
-                            "Type the ticket code printed on the ticket to check in manually.",
+                            text = "Type the ticket code printed on the ticket.",
                             fontSize = 13.sp,
                             color = TextLightMuted
                         )
+
                         Spacer(modifier = Modifier.height(12.dp))
+
                         OutlinedTextField(
                             value = manualCodeInput,
-                            onValueChange = { manualCodeInput = it },
-                            placeholder = { Text("e.g. TM-7843-2310") },
+                            onValueChange = {
+                                manualCodeInput = it
+                            },
+                            placeholder = {
+                                Text("e.g. TM-7843-2310")
+                            },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -273,10 +322,13 @@ fun ScannerScreen(
                     Button(
                         onClick = {
                             if (manualCodeInput.isNotBlank()) {
+                                val code = manualCodeInput.trim()
+
                                 showManualEntryDialog = false
                                 isVerifying = true
-                                onVerifyTicket(manualCodeInput)
                                 manualCodeInput = ""
+
+                                onVerifyTicket(code)
                             }
                         }
                     ) {
@@ -284,7 +336,11 @@ fun ScannerScreen(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showManualEntryDialog = false }) {
+                    TextButton(
+                        onClick = {
+                            showManualEntryDialog = false
+                        }
+                    ) {
                         Text("Cancel")
                     }
                 }
@@ -329,7 +385,6 @@ fun ScannerTopBar(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Online Badge
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
@@ -341,9 +396,13 @@ fun ScannerTopBar(
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(if (isOnline) ValidGreen else RejectedRed)
+                            .background(
+                                if (isOnline) ValidGreen else RejectedRed
+                            )
                     )
+
                     Spacer(modifier = Modifier.width(6.dp))
+
                     Text(
                         text = if (isOnline) "Online" else "Offline",
                         color = if (isOnline) ValidGreen else RejectedRed,
@@ -354,9 +413,15 @@ fun ScannerTopBar(
             }
         }
 
-        IconButton(onClick = onFlashlightToggle) {
+        IconButton(
+            onClick = onFlashlightToggle
+        ) {
             Icon(
-                imageVector = if (isFlashlightOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                imageVector = if (isFlashlightOn) {
+                    Icons.Default.FlashOn
+                } else {
+                    Icons.Default.FlashOff
+                },
                 contentDescription = "Toggle Flashlight",
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
