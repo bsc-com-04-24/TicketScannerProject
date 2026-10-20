@@ -48,7 +48,7 @@ import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextDark
 import com.example.ticket_scanner.ui.theme.TextMuted
 import com.example.ticket_scanner.ui.theme.ValidGreen
-
+//@Preview(showBackground = true)
 @Composable
 fun AlertsScreen(
     notifications: List<NotificationItem>,

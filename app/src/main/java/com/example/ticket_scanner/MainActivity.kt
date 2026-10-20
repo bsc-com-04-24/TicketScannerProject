@@ -1,4 +1,3 @@
-
 package com.example.ticket_scanner
 
 import android.os.Bundle
@@ -13,22 +12,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.ticket_scanner.QrMessageDecoder
-import com.example.ticket_scanner.QrMessageType
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.screens.AlertsScreen
+import com.example.ticket_scanner.ui.screens.AuthScreen
 import com.example.ticket_scanner.ui.screens.HistoryScreen
+import com.example.ticket_scanner.ui.screens.OfflineTicketResultScreen
 import com.example.ticket_scanner.ui.screens.ScannerScreen
 import com.example.ticket_scanner.ui.screens.SettingsScreen
 import com.example.ticket_scanner.ui.screens.SplashScreen
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.example.ticket_scanner.ui.screens.OfflineTicketResultScreen
-import androidx.compose.runtime.LaunchedEffect
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,22 +44,33 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun TicketScannerMainApp() {
     var showSplash by remember { mutableStateOf(true) }
+    var isLoggedIn by remember { mutableStateOf(false) }
+    var loginError by remember { mutableStateOf<String?>(null) }
+
     var selectedTab by remember { mutableStateOf(NavTab.SCAN) }
     var scanStats by remember { mutableStateOf(MockData.sampleScanStats) }
     var scanHistoryItems by remember { mutableStateOf(MockData.sampleScanItems) }
-    var notificationItems by remember {
-        mutableStateOf(MockData.sampleNotifications)
-    }
+    var notificationItems by remember { mutableStateOf(MockData.sampleNotifications) }
     var showTicketResult by remember { mutableStateOf(false) }
-    var lastTicketResult by remember {
-        mutableStateOf<ScanItem?>(null)
-    }
+    var lastTicketResult by remember { mutableStateOf<ScanItem?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
 
     if (showSplash) {
         SplashScreen(
             onTimeout = { showSplash = false }
+        )
+    } else if (!isLoggedIn) {
+        AuthScreen(
+            errorMessage = loginError,
+            onLoginClick = { username, password ->
+                if (username.trim() == "user" && password == "user") {
+                    loginError = null
+                    isLoggedIn = true
+                } else {
+                    loginError = "Invalid username or password"
+                }
+            }
         )
     } else if (showTicketResult && lastTicketResult != null) {
         val ticket = lastTicketResult!!
@@ -136,8 +144,7 @@ fun TicketScannerMainApp() {
                                 isSynced = false
                             )
 
-                            scanHistoryItems =
-                                listOf(newScan) + scanHistoryItems
+                            scanHistoryItems = listOf(newScan) + scanHistoryItems
                             lastTicketResult = newScan
                             showTicketResult = true
 
