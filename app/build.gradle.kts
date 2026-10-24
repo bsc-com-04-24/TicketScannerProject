@@ -37,9 +37,13 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.runtime)
 
+    // Keep dependencies from ticket-check-in
+    implementation(libs.androidx.compose.runtime)
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+
+    // Keep dependency from SharedScanner
+    implementation(libs.androidx.compose.material.icons.extended)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
