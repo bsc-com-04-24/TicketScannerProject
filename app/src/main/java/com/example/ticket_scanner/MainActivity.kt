@@ -2,6 +2,7 @@ package com.example.ticket_scanner
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -19,11 +20,16 @@ import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.screens.AlertsScreen
 import com.example.ticket_scanner.ui.screens.AuthScreen
 import com.example.ticket_scanner.ui.screens.HistoryScreen
-import com.example.ticket_scanner.ui.screens.OfflineTicketResultScreen
 import com.example.ticket_scanner.ui.screens.ScannerScreen
 import com.example.ticket_scanner.ui.screens.SettingsScreen
 import com.example.ticket_scanner.ui.screens.SplashScreen
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
+// VALIDATION (ticket validation feature)
+import com.example.ticket_scanner.validation.domain.TicketValidator
+import com.example.ticket_scanner.validation.model.ScannedTicket
+import com.example.ticket_scanner.validation.model.ValidationResult
+import com.example.ticket_scanner.validation.model.ValidationStatus
+import com.example.ticket_scanner.validation.ui.ValidationResultScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -52,9 +58,14 @@ fun TicketScannerMainApp() {
     var scanHistoryItems by remember { mutableStateOf(MockData.sampleScanItems) }
     var notificationItems by remember { mutableStateOf(MockData.sampleNotifications) }
     var showTicketResult by remember { mutableStateOf(false) }
-    var lastTicketResult by remember { mutableStateOf<ScanItem?>(null) }
+
+    // VALIDATION: the outcome of the last validated scan (replaces lastTicketResult)
+    var lastValidation by remember { mutableStateOf<ValidationResult?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
+
+    // VALIDATION: Back on a result screen returns to the scanner
+    BackHandler(enabled = showTicketResult) { showTicketResult = false }
 
     if (showSplash) {
         SplashScreen(
@@ -72,20 +83,11 @@ fun TicketScannerMainApp() {
                 }
             }
         )
-    } else if (showTicketResult && lastTicketResult != null) {
-        val ticket = lastTicketResult!!
-
-        OfflineTicketResultScreen(
-            ticketId = ticket.ticketCode,
-            eventName = "Malawi Music Concert",
-            status = ticket.status.name,
-            details = mapOf(
-                "Attendee" to ticket.attendeeName,
-                "Offline status" to if (ticket.isSynced) "Synced" else "Not synced"
-            ),
-            onBack = {
-                showTicketResult = false
-            }
+    } else if (showTicketResult && lastValidation != null) {
+        // VALIDATION: shows Valid / Invalid / Expired / Already Used screens
+        ValidationResultScreen(
+            result = lastValidation!!,
+            onScanNext = { showTicketResult = false }
         )
     } else {
         when (selectedTab) {
@@ -105,47 +107,31 @@ fun TicketScannerMainApp() {
                                     ?: decoded.fields["ticketCode"]
                                     ?: decoded.rawMessage
 
-                            val existingTicket = scanHistoryItems.find {
-                                it.ticketCode.equals(
-                                    actualTicketCode,
-                                    ignoreCase = true
+                            // VALIDATION: decide valid / invalid / expired / already used.
+                            // Type, holder and event are only compared when the QR contains them.
+                            val validation = TicketValidator.validate(
+                                ScannedTicket(
+                                    ticketCode = actualTicketCode,
+                                    ticketType = decoded.fields["ticketType"] ?: "",
+                                    holderName = decoded.fields["holderName"]
+                                        ?: decoded.fields["attendeeName"] ?: "",
+                                    event = decoded.fields["event"]
+                                        ?: decoded.fields["eventName"] ?: ""
                                 )
-                            }
-
-                            val status = when {
-                                decoded.type == QrMessageType.UNKNOWN ->
-                                    ScanStatus.REJECTED
-
-                                existingTicket == null ->
-                                    ScanStatus.REJECTED
-
-                                existingTicket.status == ScanStatus.EXPIRED ->
-                                    ScanStatus.EXPIRED
-
-                                existingTicket.status == ScanStatus.CANCELLED ->
-                                    ScanStatus.CANCELLED
-
-                                existingTicket.status == ScanStatus.ALREADY_USED ->
-                                    ScanStatus.ALREADY_USED
-
-                                existingTicket.status == ScanStatus.REJECTED ->
-                                    ScanStatus.REJECTED
-
-                                else -> ScanStatus.VALID
-                            }
+                            )
+                            val status = validation.status.toScanStatus()
 
                             val newScan = ScanItem(
                                 id = System.currentTimeMillis().toString(),
-                                attendeeName = existingTicket?.attendeeName
-                                    ?: "Unknown Attendee",
-                                ticketCode = actualTicketCode,
+                                attendeeName = validation.holderName ?: "Unknown Attendee",
+                                ticketCode = validation.ticketCode,
                                 time = "Just now",
                                 status = status,
                                 isSynced = false
                             )
 
                             scanHistoryItems = listOf(newScan) + scanHistoryItems
-                            lastTicketResult = newScan
+                            lastValidation = validation
                             showTicketResult = true
 
                             scanStats = scanStats.copy(
@@ -190,4 +176,12 @@ fun TicketScannerMainApp() {
             }
         }
     }
+}
+
+// VALIDATION: converts our result to the history list's ScanStatus
+private fun ValidationStatus.toScanStatus(): ScanStatus = when (this) {
+    ValidationStatus.VALID -> ScanStatus.VALID
+    ValidationStatus.INVALID -> ScanStatus.REJECTED
+    ValidationStatus.EXPIRED -> ScanStatus.EXPIRED
+    ValidationStatus.ALREADY_USED -> ScanStatus.ALREADY_USED
 }
