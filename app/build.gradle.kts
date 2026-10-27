@@ -1,15 +1,15 @@
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
-    namespace = "com.example.ticketcheck_in"
+    namespace = "com.example.ticket_scanner"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.ticketcheck_in"
+        applicationId = "com.example.ticket_scanner"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -28,6 +28,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -39,12 +45,8 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
 
-    // Keep dependencies from ticket-check-in
-    implementation(libs.androidx.compose.runtime)
+    implementation("androidx.compose.runtime:runtime")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
-
-    // Keep dependency from SharedScanner
-    implementation(libs.androidx.compose.material.icons.extended)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
