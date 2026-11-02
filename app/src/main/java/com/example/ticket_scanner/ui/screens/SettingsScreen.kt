@@ -13,13 +13,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -43,6 +46,7 @@ import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
 import com.example.ticket_scanner.ui.theme.LightBackground
+import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextDark
 import com.example.ticket_scanner.ui.theme.TextMuted
 
@@ -50,7 +54,9 @@ import com.example.ticket_scanner.ui.theme.TextMuted
 fun SettingsScreen(
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onToggleOffline: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     var autoSyncEnabled by remember { mutableStateOf(true) }
     var soundVibrationEnabled by remember { mutableStateOf(true) }
@@ -113,15 +119,24 @@ fun SettingsScreen(
                 )
 
                 SettingItemRow(
-                    title = "Scanner Security & Access",
-                    subtitle = "Manage operator PIN and gate permissions",
-                    icon = Icons.Default.Lock
+                    title = "Offline Mode",
+                    subtitle = "Switch to local on-device verification",
+                    icon = Icons.Default.WifiOff,
+                    onClick = onToggleOffline
                 )
 
                 SettingItemRow(
                     title = "About Ticket Scanner",
                     subtitle = "Version 1.0.0 • Build 2025.1",
                     icon = Icons.Default.Info
+                )
+
+                SettingItemRow(
+                    title = "Sign Out",
+                    subtitle = "End operator session and return to login",
+                    icon = Icons.AutoMirrored.Filled.ExitToApp,
+                    tintColor = RejectedRed,
+                    onClick = onLogout
                 )
             }
         }
@@ -196,10 +211,14 @@ fun SettingToggleRow(
 fun SettingItemRow(
     title: String,
     subtitle: String,
-    icon: ImageVector
+    icon: ImageVector,
+    tintColor: Color = BluePrimary,
+    onClick: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
@@ -213,7 +232,7 @@ fun SettingItemRow(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = BluePrimary,
+                tint = tintColor,
                 modifier = Modifier.size(24.dp)
             )
 

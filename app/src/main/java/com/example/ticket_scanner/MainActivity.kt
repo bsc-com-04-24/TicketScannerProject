@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -22,9 +23,12 @@ import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.screens.AlertsScreen
 import com.example.ticket_scanner.ui.screens.AuthScreen
 import com.example.ticket_scanner.ui.screens.HistoryScreen
+import com.example.ticket_scanner.ui.screens.OfflineScannerScreen
+import com.example.ticket_scanner.ui.screens.OfflineTicketResultScreen
 import com.example.ticket_scanner.ui.screens.ScannerScreen
 import com.example.ticket_scanner.ui.screens.SettingsScreen
 import com.example.ticket_scanner.ui.screens.SplashScreen
+import com.example.ticket_scanner.ui.screens.VerifyingOverlay
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
 
 import com.example.ticket_scanner.validation.domain.TicketValidator
@@ -75,6 +79,12 @@ fun TicketScannerMainApp() {
     }
 
     var showTicketResult by remember { mutableStateOf(false) }
+    var isVerifying by remember { mutableStateOf(false) }
+    var isOfflineMode by remember { mutableStateOf(false) }
+
+    var offlineResult by remember {
+        mutableStateOf<Triple<String, String, String>?>(null)
+    }
 
     var lastValidation by remember {
         mutableStateOf<ValidationResult?>(null)
@@ -86,136 +96,191 @@ fun TicketScannerMainApp() {
         showTicketResult = false
     }
 
-    if (showSplash) {
+    BackHandler(enabled = offlineResult != null) {
+        offlineResult = null
+    }
 
-        SplashScreen(
-            onTimeout = { showSplash = false }
-        )
+    BackHandler(enabled = isOfflineMode && offlineResult == null) {
+        isOfflineMode = false
+    }
 
-    } else if (!isLoggedIn) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (showSplash) {
 
-        AuthScreen(
-            errorMessage = loginError,
-            onLoginClick = { username, password ->
+            SplashScreen(
+                onTimeout = { showSplash = false }
+            )
 
-                if (username.trim() == "user" && password == "user") {
-                    loginError = null
-                    isLoggedIn = true
-                } else {
-                    loginError = "Invalid username or password"
+        } else if (!isLoggedIn) {
+
+            AuthScreen(
+                errorMessage = loginError,
+                onLoginClick = { username, password ->
+
+                    if (username.trim() == "user" && password == "user") {
+                        loginError = null
+                        isLoggedIn = true
+                    } else {
+                        loginError = "Invalid username or password"
+                    }
+                }
+            )
+
+        } else if (offlineResult != null) {
+
+            OfflineTicketResultScreen(
+                ticketId = offlineResult!!.first,
+                eventName = offlineResult!!.second,
+                status = offlineResult!!.third,
+                details = mapOf(
+                    "Verification Type" to "Local Offline Database",
+                    "Device Cache" to "Synced"
+                ),
+                onBack = {
+                    offlineResult = null
+                }
+            )
+
+        } else if (isOfflineMode) {
+
+            OfflineScannerScreen(
+                onBack = { isOfflineMode = false },
+                onScanTicket = {
+                    val validation = TicketValidator.validate(
+                        ScannedTicket(
+                            ticketCode = "MTIE-2026-004281",
+                            ticketType = "General Admission",
+                            holderName = "Blessings Chirwa",
+                            event = "Malawi Tech & Innovation Expo"
+                        )
+                    )
+                    offlineResult = Triple(
+                        validation.ticketCode,
+                        validation.event ?: "Malawi Tech & Innovation Expo",
+                        validation.status.name
+                    )
+                }
+            )
+
+        } else if (showTicketResult && lastValidation != null) {
+
+            ValidationResultScreen(
+                result = lastValidation!!,
+                onScanNext = {
+                    showTicketResult = false
+                }
+            )
+
+        } else {
+
+            when (selectedTab) {
+
+                NavTab.SCAN -> {
+
+                    ScannerScreen(
+                        stats = scanStats,
+                        selectedTab = selectedTab,
+                        onTabSelected = { selectedTab = it },
+                        onOpenOfflineMode = { isOfflineMode = true },
+                        onVerifyTicket = { ticketCode ->
+                            isVerifying = true
+                            coroutineScope.launch {
+                                delay(600)
+
+                                val decoded = QrMessageDecoder.decode(ticketCode)
+
+                                val actualTicketCode =
+                                    decoded.fields["ticketId"]
+                                        ?: decoded.fields["ticketCode"]
+                                        ?: decoded.rawMessage
+
+                                val validation = TicketValidator.validate(
+                                    ScannedTicket(
+                                        ticketCode = actualTicketCode,
+                                        ticketType = decoded.fields["ticketType"] ?: "",
+                                        holderName = decoded.fields["holderName"]
+                                            ?: decoded.fields["attendeeName"] ?: "",
+                                        event = decoded.fields["event"]
+                                            ?: decoded.fields["eventName"] ?: ""
+                                    )
+                                )
+
+                                val status = validation.status.toScanStatus()
+
+                                val newScan = ScanItem(
+                                    id = System.currentTimeMillis().toString(),
+                                    attendeeName = validation.holderName
+                                        ?: "Unknown Attendee",
+                                    ticketCode = validation.ticketCode,
+                                    time = "Just now",
+                                    status = status,
+                                    isSynced = false
+                                )
+
+                                scanHistoryItems =
+                                    listOf(newScan) + scanHistoryItems
+
+                                lastValidation = validation
+                                isVerifying = false
+                                showTicketResult = true
+
+                                scanStats = scanStats.copy(
+                                    scannedCount = scanStats.scannedCount + 1,
+
+                                    validCount = scanStats.validCount +
+                                            if (status == ScanStatus.VALID) 1 else 0,
+
+                                    rejectedCount = scanStats.rejectedCount +
+                                            if (status != ScanStatus.VALID) 1 else 0,
+
+                                    isOnline = true
+                                )
+                            }
+                        }
+                    )
+                }
+
+                NavTab.HISTORY -> {
+
+                    HistoryScreen(
+                        items = scanHistoryItems,
+                        selectedTab = selectedTab,
+                        onTabSelected = { selectedTab = it }
+                    )
+                }
+
+                NavTab.ALERTS -> {
+
+                    AlertsScreen(
+                        notifications = notificationItems,
+                        selectedTab = selectedTab,
+                        onTabSelected = { selectedTab = it },
+
+                        onMarkAllAsRead = {
+                            notificationItems = notificationItems.map {
+                                it.copy(isRead = true)
+                            }
+                        }
+                    )
+                }
+
+                NavTab.SETTINGS -> {
+
+                    SettingsScreen(
+                        selectedTab = selectedTab,
+                        onTabSelected = { selectedTab = it },
+                        onToggleOffline = { isOfflineMode = true },
+                        onLogout = {
+                            isLoggedIn = false
+                            loginError = null
+                        }
+                    )
                 }
             }
-        )
+        }
 
-    } else if (showTicketResult && lastValidation != null) {
-
-        ValidationResultScreen(
-            result = lastValidation!!,
-            onScanNext = {
-                showTicketResult = false
-            }
-        )
-
-    } else {
-
-        when (selectedTab) {
-
-            NavTab.SCAN -> {
-
-                ScannerScreen(
-                    stats = scanStats,
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it },
-
-                    onVerifyTicket = { ticketCode ->
-
-                        coroutineScope.launch {
-
-                            delay(500)
-
-                            val decoded = QrMessageDecoder.decode(ticketCode)
-
-                            val actualTicketCode =
-                                decoded.fields["ticketId"]
-                                    ?: decoded.fields["ticketCode"]
-                                    ?: decoded.rawMessage
-
-                            val validation = TicketValidator.validate(
-                                ScannedTicket(
-                                    ticketCode = actualTicketCode,
-                                    ticketType = decoded.fields["ticketType"] ?: "",
-                                    holderName = decoded.fields["holderName"]
-                                        ?: decoded.fields["attendeeName"] ?: "",
-                                    event = decoded.fields["event"]
-                                        ?: decoded.fields["eventName"] ?: ""
-                                )
-                            )
-
-                            val status = validation.status.toScanStatus()
-
-                            val newScan = ScanItem(
-                                id = System.currentTimeMillis().toString(),
-                                attendeeName = validation.holderName
-                                    ?: "Unknown Attendee",
-                                ticketCode = validation.ticketCode,
-                                time = "Just now",
-                                status = status,
-                                isSynced = false
-                            )
-
-                            scanHistoryItems =
-                                listOf(newScan) + scanHistoryItems
-
-                            lastValidation = validation
-                            showTicketResult = true
-
-                            scanStats = scanStats.copy(
-                                scannedCount = scanStats.scannedCount + 1,
-
-                                validCount = scanStats.validCount +
-                                        if (status == ScanStatus.VALID) 1 else 0,
-
-                                rejectedCount = scanStats.rejectedCount +
-                                        if (status != ScanStatus.VALID) 1 else 0,
-
-                                isOnline = true
-                            )
-                        }
-                    }
-                )
-            }
-
-            NavTab.HISTORY -> {
-
-                HistoryScreen(
-                    items = scanHistoryItems,
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it }
-                )
-            }
-
-            NavTab.ALERTS -> {
-
-                AlertsScreen(
-                    notifications = notificationItems,
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it },
-
-                    onMarkAllAsRead = {
-                        notificationItems = notificationItems.map {
-                            it.copy(isRead = true)
-                        }
-                    }
-                )
-            }
-
-            NavTab.SETTINGS -> {
-
-                SettingsScreen(
-                    selectedTab = selectedTab,
-                    onTabSelected = { selectedTab = it }
-                )
-            }
+        if (isVerifying) {
+            VerifyingOverlay()
         }
     }
 }
