@@ -1,6 +1,4 @@
 
-@file:OptIn(androidx.camera.core.ExperimentalGetImage::class)
-
 package com.example.ticket_scanner
 
 import android.Manifest
@@ -9,6 +7,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
@@ -55,6 +54,7 @@ private val Green = Color(0xFF35D49A)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -101,6 +101,7 @@ fun TicketScannerScreen() {
         modifier = Modifier
             .fillMaxSize()
             .background(Navy)
+            .systemBarsPadding()
     ) {
         if (selectedTab == "Scan") {
             Column(
