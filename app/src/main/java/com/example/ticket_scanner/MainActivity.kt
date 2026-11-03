@@ -2,24 +2,33 @@
 package com.example.ticket_scanner
 
 import android.os.Bundle
+import android.media.AudioManager
+import android.media.ToneGenerator
+
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+
 import androidx.compose.ui.Modifier
 
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
+
 import com.example.ticket_scanner.ui.components.NavTab
+
 import com.example.ticket_scanner.ui.screens.AlertsScreen
 import com.example.ticket_scanner.ui.screens.AuthScreen
 import com.example.ticket_scanner.ui.screens.HistoryScreen
@@ -29,6 +38,7 @@ import com.example.ticket_scanner.ui.screens.ScannerScreen
 import com.example.ticket_scanner.ui.screens.SettingsScreen
 import com.example.ticket_scanner.ui.screens.SplashScreen
 import com.example.ticket_scanner.ui.screens.VerifyingOverlay
+
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
 
 import com.example.ticket_scanner.validation.domain.TicketValidator
@@ -93,7 +103,19 @@ fun TicketScannerMainApp() {
     val coroutineScope = rememberCoroutineScope()
 
 
-    // Back navigation
+    // SOUND GENERATOR
+    val toneGenerator = remember {
+        ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+    }
+
+    DisposableEffect(toneGenerator) {
+        onDispose {
+            toneGenerator.release()
+        }
+    }
+
+
+    // BACK NAVIGATION
     BackHandler(enabled = showTicketResult) {
         showTicketResult = false
     }
@@ -171,7 +193,7 @@ fun TicketScannerMainApp() {
 
                 onScanTicket = { ticketCode ->
 
-                    // Decode the actual scanned QR content
+                    // Decode actual QR content
                     val decoded = QrMessageDecoder.decode(ticketCode)
 
                     val actualTicketCode =
@@ -179,7 +201,7 @@ fun TicketScannerMainApp() {
                             ?: decoded.fields["ticketCode"]
                             ?: decoded.rawMessage
 
-                    // Validate against locally available ticket records
+                    // Validate ticket
                     val validation = TicketValidator.validate(
                         ScannedTicket(
                             ticketCode = actualTicketCode,
@@ -189,6 +211,12 @@ fun TicketScannerMainApp() {
                             event = decoded.fields["event"]
                                 ?: decoded.fields["eventName"] ?: ""
                         )
+                    )
+
+                    // PLAY RESULT SOUND
+                    playValidationSound(
+                        validation.status,
+                        toneGenerator
                     )
 
                     val status = validation.status.toScanStatus()
@@ -206,7 +234,7 @@ fun TicketScannerMainApp() {
 
                     scanHistoryItems = listOf(newScan) + scanHistoryItems
 
-                    // Update scanning statistics
+                    // Update statistics
                     scanStats = scanStats.copy(
                         scannedCount = scanStats.scannedCount + 1,
 
@@ -288,6 +316,12 @@ fun TicketScannerMainApp() {
                                     )
                                 )
 
+                                // PLAY RESULT SOUND
+                                playValidationSound(
+                                    validation.status,
+                                    toneGenerator
+                                )
+
                                 val status = validation.status.toScanStatus()
 
                                 val newScan = ScanItem(
@@ -307,6 +341,7 @@ fun TicketScannerMainApp() {
                                 isVerifying = false
                                 showTicketResult = true
 
+                                // Update statistics
                                 scanStats = scanStats.copy(
                                     scannedCount = scanStats.scannedCount + 1,
 
@@ -324,7 +359,7 @@ fun TicketScannerMainApp() {
                 }
 
 
-                // HISTORY SCREEN
+                // HISTORY
                 NavTab.HISTORY -> {
 
                     HistoryScreen(
@@ -337,7 +372,7 @@ fun TicketScannerMainApp() {
                 }
 
 
-                // ALERTS SCREEN
+                // ALERTS
                 NavTab.ALERTS -> {
 
                     AlertsScreen(
@@ -357,7 +392,7 @@ fun TicketScannerMainApp() {
                 }
 
 
-                // SETTINGS SCREEN
+                // SETTINGS
                 NavTab.SETTINGS -> {
 
                     SettingsScreen(
@@ -389,7 +424,46 @@ fun TicketScannerMainApp() {
 }
 
 
-// Convert validation results to scan history statuses
+// PLAY DIFFERENT SOUNDS FOR DIFFERENT VALIDATION RESULTS
+private fun playValidationSound(
+    status: ValidationStatus,
+    toneGenerator: ToneGenerator
+) {
+
+    when (status) {
+
+        ValidationStatus.VALID -> {
+            toneGenerator.startTone(
+                ToneGenerator.TONE_PROP_ACK,
+                200
+            )
+        }
+
+        ValidationStatus.INVALID -> {
+            toneGenerator.startTone(
+                ToneGenerator.TONE_PROP_NACK,
+                250
+            )
+        }
+
+        ValidationStatus.EXPIRED -> {
+            toneGenerator.startTone(
+                ToneGenerator.TONE_PROP_BEEP2,
+                250
+            )
+        }
+
+        ValidationStatus.ALREADY_USED -> {
+            toneGenerator.startTone(
+                ToneGenerator.TONE_PROP_PROMPT,
+                300
+            )
+        }
+    }
+}
+
+
+// CONVERT VALIDATION STATUS TO SCAN HISTORY STATUS
 private fun ValidationStatus.toScanStatus(): ScanStatus =
     when (this) {
 
