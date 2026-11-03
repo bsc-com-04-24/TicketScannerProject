@@ -92,6 +92,8 @@ fun TicketScannerMainApp() {
 
     val coroutineScope = rememberCoroutineScope()
 
+
+    // Back navigation
     BackHandler(enabled = showTicketResult) {
         showTicketResult = false
     }
@@ -104,14 +106,22 @@ fun TicketScannerMainApp() {
         isOfflineMode = false
     }
 
+
     Box(modifier = Modifier.fillMaxSize()) {
+
+        // SPLASH SCREEN
         if (showSplash) {
 
             SplashScreen(
-                onTimeout = { showSplash = false }
+                onTimeout = {
+                    showSplash = false
+                }
             )
 
-        } else if (!isLoggedIn) {
+        }
+
+        // LOGIN SCREEN
+        else if (!isLoggedIn) {
 
             AuthScreen(
                 errorMessage = loginError,
@@ -126,34 +136,90 @@ fun TicketScannerMainApp() {
                 }
             )
 
-        } else if (offlineResult != null) {
+        }
+
+        // OFFLINE TICKET RESULT
+        else if (offlineResult != null) {
 
             OfflineTicketResultScreen(
                 ticketId = offlineResult!!.first,
                 eventName = offlineResult!!.second,
                 status = offlineResult!!.third,
+
                 details = mapOf(
                     "Verification Type" to "Local Offline Database",
-                    "Device Cache" to "Synced"
+                    "Internet Connection" to "Not Required",
+                    "Verification Mode" to "Offline",
+                    "Synchronization Status" to "Pending"
                 ),
+
                 onBack = {
                     offlineResult = null
                 }
             )
 
-        } else if (isOfflineMode) {
+        }
+
+        // OFFLINE SCANNER
+        else if (isOfflineMode) {
 
             OfflineScannerScreen(
-                onBack = { isOfflineMode = false },
-                onScanTicket = {
+
+                onBack = {
+                    isOfflineMode = false
+                },
+
+                onScanTicket = { ticketCode ->
+
+                    // Decode the actual scanned QR content
+                    val decoded = QrMessageDecoder.decode(ticketCode)
+
+                    val actualTicketCode =
+                        decoded.fields["ticketId"]
+                            ?: decoded.fields["ticketCode"]
+                            ?: decoded.rawMessage
+
+                    // Validate against locally available ticket records
                     val validation = TicketValidator.validate(
                         ScannedTicket(
-                            ticketCode = "MTIE-2026-004281",
-                            ticketType = "General Admission",
-                            holderName = "Blessings Chirwa",
-                            event = "Malawi Tech & Innovation Expo"
+                            ticketCode = actualTicketCode,
+                            ticketType = decoded.fields["ticketType"] ?: "",
+                            holderName = decoded.fields["holderName"]
+                                ?: decoded.fields["attendeeName"] ?: "",
+                            event = decoded.fields["event"]
+                                ?: decoded.fields["eventName"] ?: ""
                         )
                     )
+
+                    val status = validation.status.toScanStatus()
+
+                    // Add scan to history
+                    val newScan = ScanItem(
+                        id = System.currentTimeMillis().toString(),
+                        attendeeName = validation.holderName
+                            ?: "Unknown Attendee",
+                        ticketCode = validation.ticketCode,
+                        time = "Just now",
+                        status = status,
+                        isSynced = false
+                    )
+
+                    scanHistoryItems = listOf(newScan) + scanHistoryItems
+
+                    // Update scanning statistics
+                    scanStats = scanStats.copy(
+                        scannedCount = scanStats.scannedCount + 1,
+
+                        validCount = scanStats.validCount +
+                                if (status == ScanStatus.VALID) 1 else 0,
+
+                        rejectedCount = scanStats.rejectedCount +
+                                if (status != ScanStatus.VALID) 1 else 0,
+
+                        isOnline = false
+                    )
+
+                    // Display offline result
                     offlineResult = Triple(
                         validation.ticketCode,
                         validation.event ?: "Malawi Tech & Innovation Expo",
@@ -162,7 +228,10 @@ fun TicketScannerMainApp() {
                 }
             )
 
-        } else if (showTicketResult && lastValidation != null) {
+        }
+
+        // ONLINE VALIDATION RESULT
+        else if (showTicketResult && lastValidation != null) {
 
             ValidationResultScreen(
                 result = lastValidation!!,
@@ -171,20 +240,34 @@ fun TicketScannerMainApp() {
                 }
             )
 
-        } else {
+        }
+
+        // MAIN APPLICATION SCREENS
+        else {
 
             when (selectedTab) {
 
+                // ONLINE SCANNER
                 NavTab.SCAN -> {
 
                     ScannerScreen(
                         stats = scanStats,
                         selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        onOpenOfflineMode = { isOfflineMode = true },
+
+                        onTabSelected = {
+                            selectedTab = it
+                        },
+
+                        onOpenOfflineMode = {
+                            isOfflineMode = true
+                        },
+
                         onVerifyTicket = { ticketCode ->
+
                             isVerifying = true
+
                             coroutineScope.launch {
+
                                 delay(600)
 
                                 val decoded = QrMessageDecoder.decode(ticketCode)
@@ -240,21 +323,30 @@ fun TicketScannerMainApp() {
                     )
                 }
 
+
+                // HISTORY SCREEN
                 NavTab.HISTORY -> {
 
                     HistoryScreen(
                         items = scanHistoryItems,
                         selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it }
+                        onTabSelected = {
+                            selectedTab = it
+                        }
                     )
                 }
 
+
+                // ALERTS SCREEN
                 NavTab.ALERTS -> {
 
                     AlertsScreen(
                         notifications = notificationItems,
                         selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
+
+                        onTabSelected = {
+                            selectedTab = it
+                        },
 
                         onMarkAllAsRead = {
                             notificationItems = notificationItems.map {
@@ -264,12 +356,21 @@ fun TicketScannerMainApp() {
                     )
                 }
 
+
+                // SETTINGS SCREEN
                 NavTab.SETTINGS -> {
 
                     SettingsScreen(
                         selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        onToggleOffline = { isOfflineMode = true },
+
+                        onTabSelected = {
+                            selectedTab = it
+                        },
+
+                        onToggleOffline = {
+                            isOfflineMode = true
+                        },
+
                         onLogout = {
                             isLoggedIn = false
                             loginError = null
@@ -279,6 +380,8 @@ fun TicketScannerMainApp() {
             }
         }
 
+
+        // VERIFYING OVERLAY
         if (isVerifying) {
             VerifyingOverlay()
         }
@@ -286,15 +389,19 @@ fun TicketScannerMainApp() {
 }
 
 
-// Converts validation results to scan history statuses.
+// Convert validation results to scan history statuses
 private fun ValidationStatus.toScanStatus(): ScanStatus =
     when (this) {
 
-        ValidationStatus.VALID -> ScanStatus.VALID
+        ValidationStatus.VALID ->
+            ScanStatus.VALID
 
-        ValidationStatus.INVALID -> ScanStatus.REJECTED
+        ValidationStatus.INVALID ->
+            ScanStatus.REJECTED
 
-        ValidationStatus.EXPIRED -> ScanStatus.EXPIRED
+        ValidationStatus.EXPIRED ->
+            ScanStatus.EXPIRED
 
-        ValidationStatus.ALREADY_USED -> ScanStatus.ALREADY_USED
+        ValidationStatus.ALREADY_USED ->
+            ScanStatus.ALREADY_USED
     }

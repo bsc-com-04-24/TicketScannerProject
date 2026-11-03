@@ -1,6 +1,10 @@
 
 package com.example.ticket_scanner.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -18,18 +22,47 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun OfflineScannerScreen(
     onBack: () -> Unit,
-    onScanTicket: () -> Unit
+    onScanTicket: (String) -> Unit
 ) {
+    val context = LocalContext.current
+
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    var scanHandled by remember { mutableStateOf(false) }
+
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            hasCameraPermission = granted
+        }
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -65,24 +98,40 @@ fun OfflineScannerScreen(
             Box(
                 modifier = Modifier
                     .size(260.dp)
+                    .clip(RoundedCornerShape(20.dp))
                     .border(
                         width = 3.dp,
                         color = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(20.dp)
                     )
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .padding(20.dp),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "QR SCANNER AREA\n\n" +
-                            "Camera preview must be connected here",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                if (hasCameraPermission && !scanHandled) {
+                    CameraPreviewView(
+                        isScanningEnabled = true,
+                        onBarcodeDetected = { code ->
+                            if (!scanHandled) {
+                                scanHandled = true
+                                onScanTicket(code)
+                            }
+                        },
+                        onCameraBound = {}
+                    )
+                } else if (!hasCameraPermission) {
+                    Button(
+                        onClick = {
+                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    ) {
+                        Text("Grant Camera Permission")
+                    }
+                } else {
+                    Text(
+                        text = "Ticket detected",
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
             Text(
@@ -92,10 +141,11 @@ fun OfflineScannerScreen(
             )
 
             Button(
-                onClick = onScanTicket,
-                modifier = Modifier.fillMaxWidth()
+                onClick = { scanHandled = false },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = scanHandled
             ) {
-                Text("Scan Ticket")
+                Text("Scan Another Ticket")
             }
 
             OutlinedButton(

@@ -1,3 +1,4 @@
+
 package com.example.ticket_scanner.ui.screens
 
 import android.Manifest
@@ -21,18 +22,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,22 +35,8 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.OfflinePin
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -114,15 +90,18 @@ fun ScannerScreen(
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasCameraPermission = isGranted
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
     }
 
     var manualCodeInput by remember { mutableStateOf("") }
     var isFlashOn by remember { mutableStateOf(false) }
     var cameraControlRef by remember { mutableStateOf<Camera?>(null) }
     var isScanningEnabled by remember { mutableStateOf(true) }
+
+    // Always use the latest verification callback.
+    val currentVerifyCallback by rememberUpdatedState(onVerifyTicket)
 
     Box(
         modifier = modifier
@@ -135,7 +114,8 @@ fun ScannerScreen(
                 .padding(bottom = 72.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header Top Bar
+
+            // HEADER
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -145,14 +125,15 @@ fun ScannerScreen(
             ) {
                 Column {
                     Text(
-                        text = "EVENT SCANNER",
+                        "EVENT SCANNER",
                         color = BluePrimary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp
                     )
+
                     Text(
-                        text = "Gate Check-In",
+                        "Gate Check-In",
                         color = TextLight,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
@@ -163,55 +144,108 @@ fun ScannerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Offline Mode Chip
-                    Box(
+                    // ONLINE STATUS
+                    Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White.copy(alpha = 0.1f))
-                            .clickable { onOpenOfflineMode() }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.OfflinePin,
-                                contentDescription = "Offline Mode",
-                                tint = if (stats.isOnline) Color(0xFF10B981) else Color(0xFFF59E0B),
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (stats.isOnline) "Online" else "Offline",
-                                color = TextLight,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        Icon(
+                            Icons.Default.OfflinePin,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(16.dp)
+                        )
+
+                        Spacer(Modifier.width(5.dp))
+
+                        Text(
+                            "Online",
+                            color = TextLight,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
 
-                    // Flash Toggle
+                    // FLASHLIGHT
                     IconButton(
                         onClick = {
                             isFlashOn = !isFlashOn
-                            cameraControlRef?.cameraControl?.enableTorch(isFlashOn)
+                            cameraControlRef?.cameraControl
+                                ?.enableTorch(isFlashOn)
                         },
                         modifier = Modifier
                             .size(38.dp)
                             .background(
-                                color = if (isFlashOn) BluePrimary else Color.White.copy(alpha = 0.12f),
-                                shape = CircleShape
+                                if (isFlashOn) BluePrimary
+                                else Color.White.copy(alpha = 0.12f),
+                                CircleShape
                             )
                     ) {
                         Icon(
-                            imageVector = if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-                            contentDescription = "Toggle Flash",
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
+                            if (isFlashOn) Icons.Default.FlashOn
+                            else Icons.Default.FlashOff,
+                            contentDescription = "Toggle flashlight",
+                            tint = Color.White
                         )
                     }
                 }
             }
 
-            // Stats Summary Row
+            // OFFLINE MODE NAVIGATION
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clickable { onOpenOfflineMode() },
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF173A4D)
+                ),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.OfflinePin,
+                        contentDescription = null,
+                        tint = Color(0xFFF59E0B),
+                        modifier = Modifier.size(24.dp)
+                    )
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Switch to Offline Scanner",
+                            color = TextLight,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            "Scan tickets without an internet connection",
+                            color = TextLightMuted,
+                            fontSize = 11.sp
+                        )
+                    }
+
+                    Text(
+                        "→",
+                        color = BluePrimary,
+                        fontSize = 22.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // STATISTICS
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -219,28 +253,30 @@ fun ScannerScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard(
-                    title = "Scanned",
-                    count = stats.scannedCount,
-                    color = BluePrimary,
-                    modifier = Modifier.weight(1f)
+                    "Scanned",
+                    stats.scannedCount,
+                    BluePrimary,
+                    Modifier.weight(1f)
                 )
+
                 StatCard(
-                    title = "Valid",
-                    count = stats.validCount,
-                    color = ValidGreen,
-                    modifier = Modifier.weight(1f)
+                    "Valid",
+                    stats.validCount,
+                    ValidGreen,
+                    Modifier.weight(1f)
                 )
+
                 StatCard(
-                    title = "Rejected",
-                    count = stats.rejectedCount,
-                    color = RejectedRed,
-                    modifier = Modifier.weight(1f)
+                    "Rejected",
+                    stats.rejectedCount,
+                    RejectedRed,
+                    Modifier.weight(1f)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
-            // Camera Viewfinder Box
+            // CAMERA VIEWFINDER
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -251,12 +287,13 @@ fun ScannerScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (hasCameraPermission) {
+
                     CameraPreviewView(
                         isScanningEnabled = isScanningEnabled,
                         onBarcodeDetected = { code ->
                             if (isScanningEnabled) {
                                 isScanningEnabled = false
-                                onVerifyTicket(code)
+                                currentVerifyCallback(code)
                             }
                         },
                         onCameraBound = { camera ->
@@ -264,73 +301,121 @@ fun ScannerScreen(
                         }
                     )
 
-                    // Target scanning reticle overlay
                     ScannerReticleOverlay()
+
+                    if (!isScanningEnabled) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.55f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    "Ticket captured!",
+                                    color = Color.White,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(Modifier.height(12.dp))
+
+                                Button(
+                                    onClick = {
+                                        isScanningEnabled = true
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = BluePrimary
+                                    )
+                                ) {
+                                    Text("Scan Next Ticket")
+                                }
+                            }
+                        }
+                    }
+
                 } else {
-                    // Permission Request Prompt
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                         modifier = Modifier.padding(24.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CameraAlt,
-                            contentDescription = "Camera Permission",
+                            Icons.Default.CameraAlt,
+                            contentDescription = null,
                             tint = BluePrimary,
                             modifier = Modifier.size(48.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Spacer(Modifier.height(12.dp))
+
                         Text(
-                            text = "Camera Permission Needed",
+                            "Camera Permission Needed",
                             color = TextLight,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Spacer(Modifier.height(6.dp))
+
                         Text(
-                            text = "Camera access is required to scan QR codes on attendee tickets.",
+                            "Camera access is required to scan QR codes.",
                             color = TextLightMuted,
                             fontSize = 12.sp,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Spacer(Modifier.height(16.dp))
+
                         Button(
-                            onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
-                            colors = ButtonDefaults.buttonColors(containerColor = BluePrimary),
-                            shape = RoundedCornerShape(12.dp)
+                            onClick = {
+                                permissionLauncher.launch(
+                                    Manifest.permission.CAMERA
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = BluePrimary
+                            )
                         ) {
-                            Text("Grant Permission", fontSize = 13.sp)
+                            Text("Grant Permission")
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(Modifier.height(18.dp))
 
-            // Manual Code Input Section
+            // MANUAL TICKET ENTRY
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(containerColor = BlueCardBackground),
+                colors = CardDefaults.cardColors(
+                    containerColor = BlueCardBackground
+                ),
                 shape = RoundedCornerShape(18.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     Text(
-                        text = "Manual Ticket Entry",
+                        "Manual Ticket Entry",
                         color = TextLight,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Spacer(Modifier.height(4.dp))
+
                     Text(
-                        text = "Enter ticket ID if barcode is damaged or unreadable",
+                        "Enter ticket ID if barcode is damaged or unreadable",
                         color = TextLightMuted,
                         fontSize = 11.sp
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Spacer(Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -338,21 +423,28 @@ fun ScannerScreen(
                     ) {
                         OutlinedTextField(
                             value = manualCodeInput,
-                            onValueChange = { manualCodeInput = it },
+                            onValueChange = {
+                                manualCodeInput = it
+                            },
                             placeholder = {
                                 Text(
-                                    text = "e.g. MTIE-2026-004281",
+                                    "e.g. MTIE-2026-004281",
                                     color = TextLightMuted,
                                     fontSize = 13.sp
                                 )
                             },
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Done
+                            ),
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     if (manualCodeInput.isNotBlank()) {
                                         focusManager.clearFocus()
-                                        onVerifyTicket(manualCodeInput.trim())
+                                        currentVerifyCallback(
+                                            manualCodeInput.trim()
+                                        )
+                                        manualCodeInput = ""
                                     }
                                 }
                             ),
@@ -360,56 +452,59 @@ fun ScannerScreen(
                                 focusedTextColor = TextLight,
                                 unfocusedTextColor = TextLight,
                                 focusedBorderColor = BluePrimary,
-                                unfocusedBorderColor = Color.White.copy(alpha = 0.15f),
-                                focusedContainerColor = Color.White.copy(alpha = 0.05f),
-                                unfocusedContainerColor = Color.White.copy(alpha = 0.05f)
+                                unfocusedBorderColor =
+                                    Color.White.copy(alpha = 0.15f),
+                                focusedContainerColor =
+                                    Color.White.copy(alpha = 0.05f),
+                                unfocusedContainerColor =
+                                    Color.White.copy(alpha = 0.05f)
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(Modifier.width(8.dp))
 
                         Button(
                             onClick = {
                                 if (manualCodeInput.isNotBlank()) {
                                     focusManager.clearFocus()
-                                    onVerifyTicket(manualCodeInput.trim())
+                                    currentVerifyCallback(
+                                        manualCodeInput.trim()
+                                    )
+                                    manualCodeInput = ""
                                 }
                             },
                             enabled = manualCodeInput.isNotBlank(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = BluePrimary,
-                                disabledContainerColor = Color.White.copy(alpha = 0.1f)
+                                containerColor = BluePrimary
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.height(52.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Verify",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Verify"
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Demo Sample Ticket Quick Chips
+            // DEMO SAMPLES
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
                 Text(
-                    text = "Quick Demo Test Samples",
+                    "Quick Demo Test Samples",
                     color = TextLightMuted,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(4.dp)
                 )
 
                 Row(
@@ -419,11 +514,26 @@ fun ScannerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     SampleScans.all.forEach { sample ->
-                        val label = sample.expectedOutcome.substringBefore(" ")
+
+                        val label =
+                            sample.expectedOutcome.substringBefore(" ")
+
                         val chipColor = when {
-                            label.contains("Valid", ignoreCase = true) -> ValidGreen
-                            label.contains("Invalid", ignoreCase = true) -> RejectedRed
-                            label.contains("Expired", ignoreCase = true) -> Color(0xFFF59E0B)
+                            label.contains(
+                                "Valid",
+                                ignoreCase = true
+                            ) -> ValidGreen
+
+                            label.contains(
+                                "Invalid",
+                                ignoreCase = true
+                            ) -> RejectedRed
+
+                            label.contains(
+                                "Expired",
+                                ignoreCase = true
+                            ) -> Color(0xFFF59E0B)
+
                             else -> Color(0xFF9333EA)
                         }
 
@@ -431,21 +541,31 @@ fun ScannerScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(chipColor.copy(alpha = 0.15f))
-                                .border(1.dp, chipColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                .border(
+                                    1.dp,
+                                    chipColor.copy(alpha = 0.4f),
+                                    RoundedCornerShape(10.dp)
+                                )
                                 .clickable {
-                                    onVerifyTicket(sample.ticket.ticketCode)
+                                    currentVerifyCallback(
+                                        sample.ticket.ticketCode
+                                    )
                                 }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .padding(
+                                    horizontal = 12.dp,
+                                    vertical = 8.dp
+                                )
                         ) {
                             Column {
                                 Text(
-                                    text = sample.ticket.ticketCode,
+                                    sample.ticket.ticketCode,
                                     color = Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+
                                 Text(
-                                    text = sample.expectedOutcome,
+                                    sample.expectedOutcome,
                                     color = chipColor,
                                     fontSize = 10.sp
                                 )
@@ -455,10 +575,10 @@ fun ScannerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
         }
 
-        // Bottom Navigation Bar pinned at bottom
+        // BOTTOM NAVIGATION
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
@@ -467,6 +587,10 @@ fun ScannerScreen(
         )
     }
 }
+
+// --------------------------------------------------
+// STATISTICS CARD
+// --------------------------------------------------
 
 @Composable
 private fun StatCard(
@@ -477,7 +601,9 @@ private fun StatCard(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = BlueCardBackground),
+        colors = CardDefaults.cardColors(
+            containerColor = BlueCardBackground
+        ),
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(
@@ -487,14 +613,16 @@ private fun StatCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = count.toString(),
+                count.toString(),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
-            Spacer(modifier = Modifier.height(2.dp))
+
+            Spacer(Modifier.height(2.dp))
+
             Text(
-                text = title,
+                title,
                 fontSize = 11.sp,
                 color = TextLightMuted,
                 fontWeight = FontWeight.Medium
@@ -503,16 +631,30 @@ private fun StatCard(
     }
 }
 
+// --------------------------------------------------
+// CAMERA PREVIEW + ML KIT QR SCANNER
+// --------------------------------------------------
+
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
-private fun CameraPreviewView(
+fun CameraPreviewView(
     isScanningEnabled: Boolean,
     onBarcodeDetected: (String) -> Unit,
     onCameraBound: (Camera) -> Unit
 ) {
+    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    // Keep callbacks and scanning state updated without
+    // recreating the camera analyzer on every recomposition.
+    val currentScanningState by rememberUpdatedState(isScanningEnabled)
+    val currentBarcodeCallback by rememberUpdatedState(onBarcodeDetected)
+    val currentCameraCallback by rememberUpdatedState(onCameraBound)
+
+    val cameraExecutor = remember {
+        Executors.newSingleThreadExecutor()
+    }
+
     val barcodeScanner = remember {
         val options = BarcodeScannerOptions.Builder()
             .setBarcodeFormats(
@@ -521,73 +663,101 @@ private fun CameraPreviewView(
                 Barcode.FORMAT_DATA_MATRIX
             )
             .build()
+
         BarcodeScanning.getClient(options)
     }
 
-    DisposableEffect(Unit) {
+    var cameraProvider by remember {
+        mutableStateOf<ProcessCameraProvider?>(null)
+    }
+
+    DisposableEffect(lifecycleOwner) {
         onDispose {
-            cameraExecutor.shutdown()
+            cameraProvider?.unbindAll()
             barcodeScanner.close()
+            cameraExecutor.shutdown()
         }
     }
 
     AndroidView(
         factory = { ctx ->
+
             val previewView = PreviewView(ctx).apply {
                 scaleType = PreviewView.ScaleType.FILL_CENTER
             }
 
-            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
-            cameraProviderFuture.addListener({
-                val cameraProvider = cameraProviderFuture.get()
+            val cameraProviderFuture =
+                ProcessCameraProvider.getInstance(ctx)
 
-                val preview = Preview.Builder().build().also {
-                    it.surfaceProvider = previewView.surfaceProvider
-                }
+            cameraProviderFuture.addListener({
+
+                val provider = cameraProviderFuture.get()
+                cameraProvider = provider
+
+                val preview = Preview.Builder()
+                    .build()
+                    .also {
+                        it.surfaceProvider = previewView.surfaceProvider
+                    }
 
                 val imageAnalysis = ImageAnalysis.Builder()
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .setBackpressureStrategy(
+                        ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST
+                    )
                     .build()
 
                 imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+
                     val mediaImage = imageProxy.image
-                    if (mediaImage != null && isScanningEnabled) {
+
+                    if (mediaImage == null ||
+                        !currentScanningState
+                    ) {
+                        imageProxy.close()
+                    } else {
+
                         val image = InputImage.fromMediaImage(
                             mediaImage,
                             imageProxy.imageInfo.rotationDegrees
                         )
+
                         barcodeScanner.process(image)
                             .addOnSuccessListener { barcodes ->
-                                for (barcode in barcodes) {
-                                    val raw = barcode.rawValue
-                                    if (!raw.isNullOrBlank()) {
-                                        onBarcodeDetected(raw)
-                                        break
+
+                                if (currentScanningState) {
+                                    for (barcode in barcodes) {
+
+                                        val rawValue = barcode.rawValue
+
+                                        if (!rawValue.isNullOrBlank()) {
+                                            currentBarcodeCallback(rawValue)
+                                            break
+                                        }
                                     }
                                 }
                             }
                             .addOnCompleteListener {
                                 imageProxy.close()
                             }
-                    } else {
-                        imageProxy.close()
                     }
                 }
 
-                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
                 try {
-                    cameraProvider.unbindAll()
-                    val camera = cameraProvider.bindToLifecycle(
+                    provider.unbindAll()
+
+                    val camera = provider.bindToLifecycle(
                         lifecycleOwner,
-                        cameraSelector,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
                         imageAnalysis
                     )
-                    onCameraBound(camera)
+
+                    currentCameraCallback(camera)
+
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
+
             }, ContextCompat.getMainExecutor(ctx))
 
             previewView
@@ -596,14 +766,24 @@ private fun CameraPreviewView(
     )
 }
 
+// --------------------------------------------------
+// ANIMATED SCANNER RETICLE
+// --------------------------------------------------
+
 @Composable
 private fun ScannerReticleOverlay() {
-    val infiniteTransition = rememberInfiniteTransition(label = "scan_laser")
+
+    val infiniteTransition =
+        rememberInfiniteTransition(label = "scan_laser")
+
     val laserY by infiniteTransition.animateFloat(
         initialValue = 0.15f,
         targetValue = 0.85f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = LinearEasing),
+            animation = tween(
+                durationMillis = 1800,
+                easing = LinearEasing
+            ),
             repeatMode = RepeatMode.Reverse
         ),
         label = "laser_y"
@@ -613,14 +793,17 @@ private fun ScannerReticleOverlay() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // Target Box
+
         Box(
             modifier = Modifier
                 .size(200.dp)
-                .border(2.dp, BluePrimary.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
+                .border(
+                    2.dp,
+                    BluePrimary.copy(alpha = 0.8f),
+                    RoundedCornerShape(16.dp)
+                )
         )
 
-        // Animated Scan Laser Line
         Box(
             modifier = Modifier
                 .size(190.dp)
@@ -636,22 +819,27 @@ private fun ScannerReticleOverlay() {
             )
         }
 
-        // Corner Highlights & Prompt
         Box(
             modifier = Modifier
                 .size(200.dp)
                 .padding(8.dp)
         ) {
             Text(
-                text = "Point camera at ticket QR",
+                "Point camera at ticket QR",
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                    .background(
+                        Color.Black.copy(alpha = 0.5f),
+                        RoundedCornerShape(6.dp)
+                    )
+                    .padding(
+                        horizontal = 8.dp,
+                        vertical = 2.dp
+                    )
             )
         }
     }
