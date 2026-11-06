@@ -11,12 +11,17 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +38,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,10 +48,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.OfflinePin
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -58,6 +70,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -75,21 +88,28 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStats
+import com.example.ticket_scanner.model.ScanStatus
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueCardBackground
 import com.example.ticket_scanner.ui.theme.BlueDarkBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
+import com.example.ticket_scanner.ui.theme.ExpiredOrange
+import com.example.ticket_scanner.ui.theme.PendingGray
 import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextLight
 import com.example.ticket_scanner.ui.theme.TextLightMuted
 import com.example.ticket_scanner.ui.theme.ValidGreen
 import com.example.ticket_scanner.validation.data.SampleScans
+import com.example.ticket_scanner.validation.model.ValidationResult
+import com.example.ticket_scanner.validation.model.ValidationStatus
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
 @Composable
@@ -99,7 +119,11 @@ fun ScannerScreen(
     onTabSelected: (NavTab) -> Unit,
     onVerifyTicket: (String) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenOfflineMode: () -> Unit = {}
+    onOpenOfflineMode: () -> Unit = {},
+    recentScans: List<ScanItem> = emptyList(),
+    isContinuousMode: Boolean = false,
+    onToggleContinuousMode: (Boolean) -> Unit = {},
+    lastValidationResult: ValidationResult? = null
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -122,7 +146,24 @@ fun ScannerScreen(
     var manualCodeInput by remember { mutableStateOf("") }
     var isFlashOn by remember { mutableStateOf(false) }
     var cameraControlRef by remember { mutableStateOf<Camera?>(null) }
+    var currentZoomRatio by remember { mutableFloatStateOf(1.0f) }
     var isScanningEnabled by remember { mutableStateOf(true) }
+    var activeFastBannerResult by remember { mutableStateOf<ValidationResult?>(null) }
+
+    // Auto-resume scanning & handle HUD overlay banner timing in continuous fast mode
+    LaunchedEffect(lastValidationResult) {
+        if (lastValidationResult != null) {
+            if (isContinuousMode) {
+                activeFastBannerResult = lastValidationResult
+                delay(1600)
+                activeFastBannerResult = null
+                isScanningEnabled = true
+            } else {
+                delay(500)
+                isScanningEnabled = true
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -139,7 +180,7 @@ fun ScannerScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -163,6 +204,33 @@ fun ScannerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Fast Continuous Gate Mode Pill Toggle
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isContinuousMode) Color(0xFF8B5CF6) else Color.White.copy(alpha = 0.12f)
+                            )
+                            .clickable { onToggleContinuousMode(!isContinuousMode) }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = "Fast Gate Mode",
+                                tint = if (isContinuousMode) Color.Yellow else TextLightMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isContinuousMode) "Fast Mode" else "Normal",
+                                color = TextLight,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     // Offline Mode Chip
                     Box(
                         modifier = Modifier
@@ -188,7 +256,7 @@ fun ScannerScreen(
                         }
                     }
 
-                    // Flash Toggle
+                    // Flash Torch Toggle
                     IconButton(
                         onClick = {
                             isFlashOn = !isFlashOn
@@ -216,7 +284,7 @@ fun ScannerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StatCard(
                     title = "Scanned",
@@ -238,14 +306,14 @@ fun ScannerScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Camera Viewfinder Box
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .height(290.dp)
+                    .height(280.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(BlueCardBackground),
                 contentAlignment = Alignment.Center
@@ -266,6 +334,90 @@ fun ScannerScreen(
 
                     // Target scanning reticle overlay
                     ScannerReticleOverlay()
+
+                    // Quick Camera Zoom Controls (1x, 2x, 3x)
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(12.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(1.0f to "1x", 2.0f to "2x", 3.0f to "3x").forEach { (ratio, label) ->
+                            val isSelected = currentZoomRatio == ratio
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) BluePrimary else Color.Transparent)
+                                    .clickable {
+                                        currentZoomRatio = ratio
+                                        cameraControlRef?.cameraControl?.setZoomRatio(ratio)
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+
+                    // Fast Gate Mode HUD Banner Overlay
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isContinuousMode && activeFastBannerResult != null,
+                        enter = fadeIn() + slideInVertically(),
+                        exit = fadeOut() + slideOutVertically(),
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    ) {
+                        activeFastBannerResult?.let { result ->
+                            val (bgColor, statusText, iconVector) = when (result.status) {
+                                ValidationStatus.VALID -> Triple(ValidGreen, "VALID TICKET", Icons.Default.CheckCircle)
+                                ValidationStatus.ALREADY_USED -> Triple(Color(0xFF8B5CF6), "ALREADY USED", Icons.Default.History)
+                                ValidationStatus.EXPIRED -> Triple(ExpiredOrange, "EXPIRED TICKET", Icons.Default.Timer)
+                                ValidationStatus.INVALID -> Triple(RejectedRed, "INVALID TICKET", Icons.Default.Cancel)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(bgColor)
+                                    .padding(12.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = iconVector,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = statusText,
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = result.holderName ?: result.ticketCode,
+                                            color = Color.White.copy(alpha = 0.95f),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 } else {
                     // Permission Request Prompt
                     Column(
@@ -305,7 +457,43 @@ fun ScannerScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Recent Scans Quick Strip
+            if (recentScans.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Recent Gate Scans",
+                            color = TextLight,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "${recentScans.size} total",
+                            color = TextLightMuted,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(recentScans.take(5)) { item ->
+                            RecentScanMiniChip(item = item)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             // Manual Code Input Section
             Card(
@@ -423,7 +611,7 @@ fun ScannerScreen(
                         val chipColor = when {
                             label.contains("Valid", ignoreCase = true) -> ValidGreen
                             label.contains("Invalid", ignoreCase = true) -> RejectedRed
-                            label.contains("Expired", ignoreCase = true) -> Color(0xFFF59E0B)
+                            label.contains("Expired", ignoreCase = true) -> ExpiredOrange
                             else -> Color(0xFF9333EA)
                         }
 
@@ -499,6 +687,50 @@ private fun StatCard(
                 color = TextLightMuted,
                 fontWeight = FontWeight.Medium
             )
+        }
+    }
+}
+
+@Composable
+private fun RecentScanMiniChip(item: ScanItem) {
+    val statusColor = when (item.status) {
+        ScanStatus.VALID -> ValidGreen
+        ScanStatus.EXPIRED -> ExpiredOrange
+        ScanStatus.CANCELLED, ScanStatus.REJECTED -> RejectedRed
+        ScanStatus.ALREADY_USED -> Color(0xFF8B5CF6)
+        ScanStatus.PENDING -> PendingGray
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = BlueCardBackground),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Column {
+                Text(
+                    text = item.attendeeName,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = item.ticketCode,
+                    color = TextLightMuted,
+                    fontSize = 9.sp,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

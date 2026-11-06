@@ -1,4 +1,3 @@
-
 package com.example.ticket_scanner
 
 import android.os.Bundle
@@ -15,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
@@ -30,6 +30,7 @@ import com.example.ticket_scanner.ui.screens.SettingsScreen
 import com.example.ticket_scanner.ui.screens.SplashScreen
 import com.example.ticket_scanner.ui.screens.VerifyingOverlay
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
+import com.example.ticket_scanner.util.ScanFeedback
 
 import com.example.ticket_scanner.validation.domain.TicketValidator
 import com.example.ticket_scanner.validation.model.ScannedTicket
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TicketScannerMainApp() {
+    val context = LocalContext.current
 
     var showSplash by remember { mutableStateOf(true) }
     var isLoggedIn by remember { mutableStateOf(false) }
@@ -81,6 +83,7 @@ fun TicketScannerMainApp() {
     var showTicketResult by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
     var isOfflineMode by remember { mutableStateOf(false) }
+    var isContinuousMode by remember { mutableStateOf(false) }
 
     var offlineResult by remember {
         mutableStateOf<Triple<String, String, String>?>(null)
@@ -159,6 +162,12 @@ fun TicketScannerMainApp() {
                         validation.event ?: "Malawi Tech & Innovation Expo",
                         validation.status.name
                     )
+
+                    if (validation.status == ValidationStatus.VALID) {
+                        ScanFeedback.playSuccess(context)
+                    } else {
+                        ScanFeedback.playError(context)
+                    }
                 }
             )
 
@@ -182,10 +191,14 @@ fun TicketScannerMainApp() {
                         selectedTab = selectedTab,
                         onTabSelected = { selectedTab = it },
                         onOpenOfflineMode = { isOfflineMode = true },
+                        recentScans = scanHistoryItems,
+                        isContinuousMode = isContinuousMode,
+                        onToggleContinuousMode = { isContinuousMode = it },
+                        lastValidationResult = lastValidation,
                         onVerifyTicket = { ticketCode ->
                             isVerifying = true
                             coroutineScope.launch {
-                                delay(600)
+                                delay(400)
 
                                 val decoded = QrMessageDecoder.decode(ticketCode)
 
@@ -222,7 +235,18 @@ fun TicketScannerMainApp() {
 
                                 lastValidation = validation
                                 isVerifying = false
-                                showTicketResult = true
+
+                                // Sound & Haptic Feedback on Scan
+                                if (validation.status == ValidationStatus.VALID) {
+                                    ScanFeedback.playSuccess(context)
+                                } else {
+                                    ScanFeedback.playError(context)
+                                }
+
+                                // Show full result screen only if not in continuous mode
+                                if (!isContinuousMode) {
+                                    showTicketResult = true
+                                }
 
                                 scanStats = scanStats.copy(
                                     scannedCount = scanStats.scannedCount + 1,
