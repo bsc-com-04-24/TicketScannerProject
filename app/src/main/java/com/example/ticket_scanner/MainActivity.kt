@@ -2,8 +2,6 @@
 package com.example.ticket_scanner
 
 import android.os.Bundle
-import android.media.AudioManager
-import android.media.ToneGenerator
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -14,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,7 +30,6 @@ import com.example.ticket_scanner.ui.screens.AlertsScreen
 import com.example.ticket_scanner.ui.screens.AuthScreen
 import com.example.ticket_scanner.ui.screens.HistoryScreen
 import com.example.ticket_scanner.ui.screens.OfflineScannerScreen
-import com.example.ticket_scanner.ui.screens.OfflineTicketResultScreen
 import com.example.ticket_scanner.ui.screens.ScannerScreen
 import com.example.ticket_scanner.ui.screens.SettingsScreen
 import com.example.ticket_scanner.ui.screens.SplashScreen
@@ -92,10 +88,6 @@ fun TicketScannerMainApp() {
     var isVerifying by remember { mutableStateOf(false) }
     var isOfflineMode by remember { mutableStateOf(false) }
 
-    var offlineResult by remember {
-        mutableStateOf<Triple<String, String, String>?>(null)
-    }
-
     var lastValidation by remember {
         mutableStateOf<ValidationResult?>(null)
     }
@@ -103,28 +95,12 @@ fun TicketScannerMainApp() {
     val coroutineScope = rememberCoroutineScope()
 
 
-    // SOUND GENERATOR
-    val toneGenerator = remember {
-        ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-    }
-
-    DisposableEffect(toneGenerator) {
-        onDispose {
-            toneGenerator.release()
-        }
-    }
-
-
     // BACK NAVIGATION
     BackHandler(enabled = showTicketResult) {
         showTicketResult = false
     }
 
-    BackHandler(enabled = offlineResult != null) {
-        offlineResult = null
-    }
-
-    BackHandler(enabled = isOfflineMode && offlineResult == null) {
+    BackHandler(enabled = isOfflineMode && !showTicketResult) {
         isOfflineMode = false
     }
 
@@ -160,23 +136,13 @@ fun TicketScannerMainApp() {
 
         }
 
-        // OFFLINE TICKET RESULT
-        else if (offlineResult != null) {
+        // VALIDATION RESULT (Online & Offline)
+        else if (showTicketResult && lastValidation != null) {
 
-            OfflineTicketResultScreen(
-                ticketId = offlineResult!!.first,
-                eventName = offlineResult!!.second,
-                status = offlineResult!!.third,
-
-                details = mapOf(
-                    "Verification Type" to "Local Offline Database",
-                    "Internet Connection" to "Not Required",
-                    "Verification Mode" to "Offline",
-                    "Synchronization Status" to "Pending"
-                ),
-
-                onBack = {
-                    offlineResult = null
+            ValidationResultScreen(
+                result = lastValidation!!,
+                onScanNext = {
+                    showTicketResult = false
                 }
             )
 
@@ -213,12 +179,6 @@ fun TicketScannerMainApp() {
                         )
                     )
 
-                    // PLAY RESULT SOUND
-                    playValidationSound(
-                        validation.status,
-                        toneGenerator
-                    )
-
                     val status = validation.status.toScanStatus()
 
                     // Add scan to history
@@ -229,7 +189,8 @@ fun TicketScannerMainApp() {
                         ticketCode = validation.ticketCode,
                         time = "Just now",
                         status = status,
-                        isSynced = false
+                        isSynced = false,
+                        event = validation.event ?: ""
                     )
 
                     scanHistoryItems = listOf(newScan) + scanHistoryItems
@@ -247,24 +208,9 @@ fun TicketScannerMainApp() {
                         isOnline = false
                     )
 
-                    // Display offline result
-                    offlineResult = Triple(
-                        validation.ticketCode,
-                        validation.event ?: "Malawi Tech & Innovation Expo",
-                        validation.status.name
-                    )
-                }
-            )
-
-        }
-
-        // ONLINE VALIDATION RESULT
-        else if (showTicketResult && lastValidation != null) {
-
-            ValidationResultScreen(
-                result = lastValidation!!,
-                onScanNext = {
-                    showTicketResult = false
+                    // Display validation result screen
+                    lastValidation = validation
+                    showTicketResult = true
                 }
             )
 
@@ -316,12 +262,6 @@ fun TicketScannerMainApp() {
                                     )
                                 )
 
-                                // PLAY RESULT SOUND
-                                playValidationSound(
-                                    validation.status,
-                                    toneGenerator
-                                )
-
                                 val status = validation.status.toScanStatus()
 
                                 val newScan = ScanItem(
@@ -331,7 +271,8 @@ fun TicketScannerMainApp() {
                                     ticketCode = validation.ticketCode,
                                     time = "Just now",
                                     status = status,
-                                    isSynced = false
+                                    isSynced = false,
+                                    event = validation.event ?: ""
                                 )
 
                                 scanHistoryItems =
@@ -367,6 +308,12 @@ fun TicketScannerMainApp() {
                         selectedTab = selectedTab,
                         onTabSelected = {
                             selectedTab = it
+                        },
+                        onClearHistory = {
+                            scanHistoryItems = emptyList()
+                        },
+                        onDeleteTicket = { ticketId ->
+                            scanHistoryItems = scanHistoryItems.filter { it.id != ticketId }
                         }
                     )
                 }
@@ -419,45 +366,6 @@ fun TicketScannerMainApp() {
         // VERIFYING OVERLAY
         if (isVerifying) {
             VerifyingOverlay()
-        }
-    }
-}
-
-
-// PLAY DIFFERENT SOUNDS FOR DIFFERENT VALIDATION RESULTS
-private fun playValidationSound(
-    status: ValidationStatus,
-    toneGenerator: ToneGenerator
-) {
-
-    when (status) {
-
-        ValidationStatus.VALID -> {
-            toneGenerator.startTone(
-                ToneGenerator.TONE_PROP_ACK,
-                200
-            )
-        }
-
-        ValidationStatus.INVALID -> {
-            toneGenerator.startTone(
-                ToneGenerator.TONE_PROP_NACK,
-                250
-            )
-        }
-
-        ValidationStatus.EXPIRED -> {
-            toneGenerator.startTone(
-                ToneGenerator.TONE_PROP_BEEP2,
-                250
-            )
-        }
-
-        ValidationStatus.ALREADY_USED -> {
-            toneGenerator.startTone(
-                ToneGenerator.TONE_PROP_PROMPT,
-                300
-            )
         }
     }
 }

@@ -771,7 +771,7 @@ fun CameraPreviewView(
 // --------------------------------------------------
 
 @Composable
-private fun ScannerReticleOverlay() {
+fun ScannerReticleOverlay() {
 
     val infiniteTransition =
         rememberInfiniteTransition(label = "scan_laser")
