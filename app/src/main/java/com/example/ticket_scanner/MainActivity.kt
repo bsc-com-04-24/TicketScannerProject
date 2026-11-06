@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,7 +20,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 
+import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
@@ -66,6 +69,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun TicketScannerMainApp() {
 
+    val context = LocalContext.current
+
     var showSplash by remember { mutableStateOf(true) }
     var isLoggedIn by remember { mutableStateOf(false) }
     var loginError by remember { mutableStateOf<String?>(null) }
@@ -77,7 +82,11 @@ fun TicketScannerMainApp() {
     }
 
     var scanHistoryItems by remember {
-        mutableStateOf(MockData.sampleScanItems)
+        mutableStateOf(HistoryStorageManager.loadHistory(context))
+    }
+
+    LaunchedEffect(scanHistoryItems) {
+        HistoryStorageManager.saveHistory(context, scanHistoryItems)
     }
 
     var notificationItems by remember {
