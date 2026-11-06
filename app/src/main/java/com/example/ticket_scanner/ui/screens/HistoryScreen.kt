@@ -33,6 +33,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -56,7 +57,6 @@ import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
 import com.example.ticket_scanner.ui.theme.ExpiredOrange
-import com.example.ticket_scanner.ui.theme.LightBackground
 import com.example.ticket_scanner.ui.theme.PendingGray
 import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextDark
@@ -77,6 +77,7 @@ fun HistoryScreen(
     onTabSelected: (NavTab) -> Unit,
     onClearHistory: () -> Unit,
     onDeleteTicket: (String) -> Unit,
+    isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -107,7 +108,7 @@ fun HistoryScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -158,7 +159,7 @@ fun HistoryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
                 OutlinedTextField(
@@ -166,7 +167,7 @@ fun HistoryScreen(
                     onValueChange = { searchQuery = it },
                     placeholder = {
                         Text(
-                            "Search by code or name...",
+                            "Search by code, name or event...",
                             fontSize = 14.sp,
                             color = TextMuted
                         )
@@ -183,10 +184,10 @@ fun HistoryScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BluePrimary,
                         unfocusedBorderColor = Color(0xFFE2E8F0),
-                        focusedContainerColor = Color(0xFFF8FAFC),
-                        unfocusedContainerColor = Color(0xFFF8FAFC),
-                        focusedTextColor = TextDark,
-                        unfocusedTextColor = TextDark,
+                        focusedContainerColor = MaterialTheme.colorScheme.background,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                         cursorColor = BluePrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
@@ -247,7 +248,7 @@ fun HistoryScreen(
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
-            isDark = false,
+            isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -294,7 +295,7 @@ fun ScanHistoryCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -329,7 +330,7 @@ fun ScanHistoryCard(
                     text = scanItem.attendeeName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextDark
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))

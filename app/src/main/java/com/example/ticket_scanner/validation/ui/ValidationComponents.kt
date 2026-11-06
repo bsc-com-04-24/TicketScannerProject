@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -61,7 +62,7 @@ internal fun ValidationCard(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(ValidationColors.PageBackground)
+            .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .padding(14.dp)
     ) {
@@ -69,7 +70,7 @@ internal fun ValidationCard(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(cardShape)
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
                 .border(3.dp, color, cardShape)
                 .padding(20.dp)
         ) {
@@ -138,10 +139,15 @@ internal fun DetailRows(rows: List<Pair<String, String?>>) {
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                Text(label, color = ValidationColors.LabelGray, fontSize = 13.sp, modifier = Modifier.weight(0.4f))
+                Text(
+                    label,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(0.4f)
+                )
                 Text(
                     value,
-                    color = ValidationColors.ValueDark,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(0.6f)

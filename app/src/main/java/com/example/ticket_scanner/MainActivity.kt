@@ -335,7 +335,8 @@ fun TicketScannerMainApp(
                         },
                         onDeleteTicket = { ticketId ->
                             scanHistoryItems = scanHistoryItems.filter { it.id != ticketId }
-                        }
+                        },
+                        isDarkMode = isDarkMode
                     )
                 }
 
@@ -346,6 +347,7 @@ fun TicketScannerMainApp(
                     AlertsScreen(
                         notifications = notificationItems,
                         selectedTab = selectedTab,
+                        isDarkMode = isDarkMode,
 
                         onTabSelected = {
                             selectedTab = it
