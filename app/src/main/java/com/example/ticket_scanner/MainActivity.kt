@@ -56,9 +56,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            TicketScannerTheme {
+            val context = LocalContext.current
+            var isDarkMode by remember { mutableStateOf(HistoryStorageManager.loadDarkMode(context)) }
+
+            TicketScannerTheme(darkTheme = isDarkMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    TicketScannerMainApp()
+                    TicketScannerMainApp(
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = { enabled ->
+                            isDarkMode = enabled
+                            HistoryStorageManager.saveDarkMode(context, enabled)
+                        }
+                    )
                 }
             }
         }
@@ -67,7 +76,10 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun TicketScannerMainApp() {
+fun TicketScannerMainApp(
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean) -> Unit
+) {
 
     val context = LocalContext.current
 
@@ -353,6 +365,8 @@ fun TicketScannerMainApp() {
 
                     SettingsScreen(
                         selectedTab = selectedTab,
+                        isDarkMode = isDarkMode,
+                        onToggleDarkMode = onToggleDarkMode,
 
                         onTabSelected = {
                             selectedTab = it

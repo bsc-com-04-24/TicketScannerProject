@@ -7,6 +7,7 @@ import org.json.JSONObject
 object HistoryStorageManager {
     private const val PREFS_NAME = "ticket_scanner_prefs"
     private const val KEY_SCAN_HISTORY = "scan_history_json"
+    private const val KEY_DARK_MODE = "dark_mode_enabled"
 
     fun saveHistory(context: Context, items: List<ScanItem>) {
         val jsonArray = JSONArray()
@@ -52,9 +53,18 @@ object HistoryStorageManager {
                     )
                 )
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (ignored: Exception) {
         }
         return list
+    }
+
+    fun saveDarkMode(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply()
+    }
+
+    fun loadDarkMode(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_DARK_MODE, false)
     }
 }
