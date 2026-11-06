@@ -248,6 +248,7 @@ fun TicketScannerMainApp(
                     ScannerScreen(
                         stats = scanStats,
                         selectedTab = selectedTab,
+                        isDarkMode = isDarkMode,
 
                         onTabSelected = {
                             selectedTab = it

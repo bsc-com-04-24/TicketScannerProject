@@ -1,4 +1,3 @@
-
 package com.example.ticket_scanner.ui.screens
 
 import android.Manifest
@@ -60,6 +59,7 @@ import com.example.ticket_scanner.ui.theme.BluePrimary
 import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextLight
 import com.example.ticket_scanner.ui.theme.TextLightMuted
+import com.example.ticket_scanner.ui.theme.TextMuted
 import com.example.ticket_scanner.ui.theme.ValidGreen
 import com.example.ticket_scanner.validation.data.SampleScans
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -74,11 +74,17 @@ fun ScannerScreen(
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
     onVerifyTicket: (String) -> Unit,
+    isDarkMode: Boolean = true,
     modifier: Modifier = Modifier,
     onOpenOfflineMode: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+
+    val bg = if (isDarkMode) BlueDarkBackground else MaterialTheme.colorScheme.background
+    val cardBg = if (isDarkMode) BlueCardBackground else MaterialTheme.colorScheme.surface
+    val textColor = if (isDarkMode) TextLight else MaterialTheme.colorScheme.onSurface
+    val textMutedColor = if (isDarkMode) TextLightMuted else TextMuted
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -106,7 +112,7 @@ fun ScannerScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(BlueDarkBackground)
+            .background(bg)
     ) {
         Column(
             modifier = Modifier
@@ -134,7 +140,7 @@ fun ScannerScreen(
 
                     Text(
                         "Gate Check-In",
-                        color = TextLight,
+                        color = textColor,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -148,7 +154,10 @@ fun ScannerScreen(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.1f))
+                            .background(
+                                if (isDarkMode) Color.White.copy(alpha = 0.1f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -163,7 +172,7 @@ fun ScannerScreen(
 
                         Text(
                             "Online",
-                            color = TextLight,
+                            color = textColor,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -180,7 +189,8 @@ fun ScannerScreen(
                             .size(38.dp)
                             .background(
                                 if (isFlashOn) BluePrimary
-                                else Color.White.copy(alpha = 0.12f),
+                                else if (isDarkMode) Color.White.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant,
                                 CircleShape
                             )
                     ) {
@@ -188,7 +198,7 @@ fun ScannerScreen(
                             if (isFlashOn) Icons.Default.FlashOn
                             else Icons.Default.FlashOff,
                             contentDescription = "Toggle flashlight",
-                            tint = Color.White
+                            tint = if (isFlashOn || isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -201,7 +211,7 @@ fun ScannerScreen(
                     .padding(horizontal = 16.dp)
                     .clickable { onOpenOfflineMode() },
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF173A4D)
+                    containerColor = if (isDarkMode) Color(0xFF173A4D) else cardBg
                 ),
                 shape = RoundedCornerShape(14.dp)
             ) {
@@ -223,14 +233,14 @@ fun ScannerScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Switch to Offline Scanner",
-                            color = TextLight,
+                            color = textColor,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
 
                         Text(
                             "Scan tickets without an internet connection",
-                            color = TextLightMuted,
+                            color = textMutedColor,
                             fontSize = 11.sp
                         )
                     }
@@ -256,6 +266,8 @@ fun ScannerScreen(
                     "Scanned",
                     stats.scannedCount,
                     BluePrimary,
+                    cardBg,
+                    textColor,
                     Modifier.weight(1f)
                 )
 
@@ -263,6 +275,8 @@ fun ScannerScreen(
                     "Valid",
                     stats.validCount,
                     ValidGreen,
+                    cardBg,
+                    textColor,
                     Modifier.weight(1f)
                 )
 
@@ -270,6 +284,8 @@ fun ScannerScreen(
                     "Rejected",
                     stats.rejectedCount,
                     RejectedRed,
+                    cardBg,
+                    textColor,
                     Modifier.weight(1f)
                 )
             }
@@ -283,7 +299,7 @@ fun ScannerScreen(
                     .padding(horizontal = 20.dp)
                     .height(290.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(BlueCardBackground),
+                    .background(cardBg),
                 contentAlignment = Alignment.Center
             ) {
                 if (hasCameraPermission) {
@@ -352,22 +368,13 @@ fun ScannerScreen(
                         Spacer(Modifier.height(12.dp))
 
                         Text(
-                            "Camera Permission Needed",
-                            color = TextLight,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(Modifier.height(6.dp))
-
-                        Text(
                             "Camera access is required to scan QR codes.",
-                            color = TextLightMuted,
-                            fontSize = 12.sp,
+                            color = textColor,
+                            fontSize = 13.sp,
                             textAlign = TextAlign.Center
                         )
 
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(14.dp))
 
                         Button(
                             onClick = {
@@ -393,7 +400,7 @@ fun ScannerScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = BlueCardBackground
+                    containerColor = cardBg
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
@@ -402,7 +409,7 @@ fun ScannerScreen(
                 ) {
                     Text(
                         "Manual Ticket Entry",
-                        color = TextLight,
+                        color = textColor,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -411,7 +418,7 @@ fun ScannerScreen(
 
                     Text(
                         "Enter ticket ID if barcode is damaged or unreadable",
-                        color = TextLightMuted,
+                        color = textMutedColor,
                         fontSize = 11.sp
                     )
 
@@ -429,7 +436,7 @@ fun ScannerScreen(
                             placeholder = {
                                 Text(
                                     "e.g. MTIE-2026-004281",
-                                    color = TextLightMuted,
+                                    color = textMutedColor,
                                     fontSize = 13.sp
                                 )
                             },
@@ -449,15 +456,15 @@ fun ScannerScreen(
                                 }
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = TextLight,
-                                unfocusedTextColor = TextLight,
+                                focusedTextColor = textColor,
+                                unfocusedTextColor = textColor,
                                 focusedBorderColor = BluePrimary,
                                 unfocusedBorderColor =
-                                    Color.White.copy(alpha = 0.15f),
+                                    if (isDarkMode) Color.White.copy(alpha = 0.15f) else Color(0xFFE2E8F0),
                                 focusedContainerColor =
-                                    Color.White.copy(alpha = 0.05f),
+                                    if (isDarkMode) Color.White.copy(alpha = 0.05f) else MaterialTheme.colorScheme.background,
                                 unfocusedContainerColor =
-                                    Color.White.copy(alpha = 0.05f)
+                                    if (isDarkMode) Color.White.copy(alpha = 0.05f) else MaterialTheme.colorScheme.background
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
@@ -501,7 +508,7 @@ fun ScannerScreen(
             ) {
                 Text(
                     "Quick Demo Test Samples",
-                    color = TextLightMuted,
+                    color = textMutedColor,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(4.dp)
@@ -559,7 +566,7 @@ fun ScannerScreen(
                             Column {
                                 Text(
                                     sample.ticket.ticketCode,
-                                    color = Color.White,
+                                    color = textColor,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -582,7 +589,7 @@ fun ScannerScreen(
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
-            isDark = true,
+            isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -597,12 +604,14 @@ private fun StatCard(
     title: String,
     count: Int,
     color: Color,
+    cardBg: Color,
+    textColor: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = BlueCardBackground
+            containerColor = cardBg
         ),
         shape = RoundedCornerShape(14.dp)
     ) {
@@ -624,8 +633,7 @@ private fun StatCard(
             Text(
                 title,
                 fontSize = 11.sp,
-                color = TextLightMuted,
-                fontWeight = FontWeight.Medium
+                color = textColor
             )
         }
     }
@@ -649,31 +657,19 @@ fun CameraPreviewView(
     // recreating the camera analyzer on every recomposition.
     val currentScanningState by rememberUpdatedState(isScanningEnabled)
     val currentBarcodeCallback by rememberUpdatedState(onBarcodeDetected)
-    val currentCameraCallback by rememberUpdatedState(onCameraBound)
-
-    val cameraExecutor = remember {
-        Executors.newSingleThreadExecutor()
-    }
+    val currentCameraBoundCallback by rememberUpdatedState(onCameraBound)
 
     val barcodeScanner = remember {
         val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(
-                Barcode.FORMAT_QR_CODE,
-                Barcode.FORMAT_CODE_128,
-                Barcode.FORMAT_DATA_MATRIX
-            )
+            .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
             .build()
-
         BarcodeScanning.getClient(options)
     }
 
-    var cameraProvider by remember {
-        mutableStateOf<ProcessCameraProvider?>(null)
-    }
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
 
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(Unit) {
         onDispose {
-            cameraProvider?.unbindAll()
             barcodeScanner.close()
             cameraExecutor.shutdown()
         }
@@ -681,83 +677,79 @@ fun CameraPreviewView(
 
     AndroidView(
         factory = { ctx ->
-
             val previewView = PreviewView(ctx).apply {
                 scaleType = PreviewView.ScaleType.FILL_CENTER
             }
 
-            val cameraProviderFuture =
-                ProcessCameraProvider.getInstance(ctx)
-
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             cameraProviderFuture.addListener({
+                try {
+                    val cameraProvider = cameraProviderFuture.get()
 
-                val provider = cameraProviderFuture.get()
-                cameraProvider = provider
-
-                val preview = Preview.Builder()
-                    .build()
-                    .also {
+                    val preview = Preview.Builder().build().also {
                         it.surfaceProvider = previewView.surfaceProvider
                     }
 
-                val imageAnalysis = ImageAnalysis.Builder()
-                    .setBackpressureStrategy(
-                        ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST
-                    )
-                    .build()
+                    val selector = CameraSelector.DEFAULT_BACK_CAMERA
 
-                imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                    val imageAnalysis = ImageAnalysis.Builder()
+                        .setBackpressureStrategy(
+                            ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST
+                        )
+                        .build()
 
-                    val mediaImage = imageProxy.image
+                    imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                        if (!currentScanningState) {
+                            imageProxy.close()
+                            return@setAnalyzer
+                        }
 
-                    if (mediaImage == null ||
-                        !currentScanningState
-                    ) {
-                        imageProxy.close()
-                    } else {
+                        val mediaImage = imageProxy.image
+                        if (mediaImage == null) {
+                            imageProxy.close()
+                            return@setAnalyzer
+                        }
 
-                        val image = InputImage.fromMediaImage(
+                        val inputImage = InputImage.fromMediaImage(
                             mediaImage,
                             imageProxy.imageInfo.rotationDegrees
                         )
 
-                        barcodeScanner.process(image)
+                        barcodeScanner.process(inputImage)
                             .addOnSuccessListener { barcodes ->
-
-                                if (currentScanningState) {
-                                    for (barcode in barcodes) {
-
-                                        val rawValue = barcode.rawValue
-
-                                        if (!rawValue.isNullOrBlank()) {
-                                            currentBarcodeCallback(rawValue)
-                                            break
-                                        }
+                                val code = barcodes.firstNotNullOfOrNull { barcode ->
+                                    barcode.rawValue?.takeIf { value ->
+                                        value.isNotBlank()
                                     }
                                 }
+
+                                if (code != null && currentScanningState) {
+                                    previewView.post {
+                                        currentBarcodeCallback(code)
+                                    }
+                                }
+                            }
+                            .addOnFailureListener {
+                                // Ignore or log scan failures
                             }
                             .addOnCompleteListener {
                                 imageProxy.close()
                             }
                     }
-                }
 
-                try {
-                    provider.unbindAll()
-
-                    val camera = provider.bindToLifecycle(
+                    cameraProvider.unbindAll()
+                    val camera = cameraProvider.bindToLifecycle(
                         lifecycleOwner,
-                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        selector,
                         preview,
                         imageAnalysis
                     )
 
-                    currentCameraCallback(camera)
+                    currentCameraBoundCallback(camera)
 
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    // Handle camera binding exceptions
                 }
-
             }, ContextCompat.getMainExecutor(ctx))
 
             previewView
