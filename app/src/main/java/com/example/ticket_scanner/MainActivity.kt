@@ -9,6 +9,8 @@ import androidx.activity.compose.setContent
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Surface
 
 import androidx.compose.runtime.Composable
@@ -237,153 +239,184 @@ fun TicketScannerMainApp(
 
         }
 
-        // MAIN APPLICATION SCREENS
+        // MAIN APPLICATION SCREENS (Swipeable Pager & Bottom Bar)
         else {
+            val pagerState = rememberPagerState(
+                initialPage = selectedTab.ordinal,
+                pageCount = { NavTab.entries.size }
+            )
 
-            when (selectedTab) {
+            LaunchedEffect(pagerState.currentPage) {
+                selectedTab = NavTab.entries[pagerState.currentPage]
+            }
 
-                // ONLINE SCANNER
-                NavTab.SCAN -> {
+            LaunchedEffect(selectedTab) {
+                if (pagerState.currentPage != selectedTab.ordinal) {
+                    pagerState.animateScrollToPage(selectedTab.ordinal)
+                }
+            }
 
-                    ScannerScreen(
-                        stats = scanStats,
-                        selectedTab = selectedTab,
-                        isDarkMode = isDarkMode,
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (NavTab.entries[page]) {
 
-                        onTabSelected = {
-                            selectedTab = it
-                        },
+                    // ONLINE SCANNER
+                    NavTab.SCAN -> {
 
-                        onOpenOfflineMode = {
-                            isOfflineMode = true
-                        },
+                        ScannerScreen(
+                            stats = scanStats,
+                            selectedTab = selectedTab,
+                            isDarkMode = isDarkMode,
 
-                        onVerifyTicket = { ticketCode ->
+                            onTabSelected = { tab ->
+                                selectedTab = tab
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(tab.ordinal)
+                                }
+                            },
 
-                            isVerifying = true
+                            onOpenOfflineMode = {
+                                isOfflineMode = true
+                            },
 
-                            coroutineScope.launch {
+                            onVerifyTicket = { ticketCode ->
 
-                                delay(600)
+                                isVerifying = true
 
-                                val decoded = QrMessageDecoder.decode(ticketCode)
+                                coroutineScope.launch {
 
-                                val actualTicketCode =
-                                    decoded.fields["ticketId"]
-                                        ?: decoded.fields["ticketCode"]
-                                        ?: decoded.rawMessage
+                                    delay(600)
 
-                                val validation = TicketValidator.validate(
-                                    ScannedTicket(
-                                        ticketCode = actualTicketCode,
-                                        ticketType = decoded.fields["ticketType"] ?: "",
-                                        holderName = decoded.fields["holderName"]
-                                            ?: decoded.fields["attendeeName"] ?: "",
-                                        event = decoded.fields["event"]
-                                            ?: decoded.fields["eventName"] ?: ""
+                                    val decoded = QrMessageDecoder.decode(ticketCode)
+
+                                    val actualTicketCode =
+                                        decoded.fields["ticketId"]
+                                            ?: decoded.fields["ticketCode"]
+                                            ?: decoded.rawMessage
+
+                                    val validation = TicketValidator.validate(
+                                        ScannedTicket(
+                                            ticketCode = actualTicketCode,
+                                            ticketType = decoded.fields["ticketType"] ?: "",
+                                            holderName = decoded.fields["holderName"]
+                                                ?: decoded.fields["attendeeName"] ?: "",
+                                            event = decoded.fields["event"]
+                                                ?: decoded.fields["eventName"] ?: ""
+                                        )
                                     )
-                                )
 
-                                val status = validation.status.toScanStatus()
+                                    val status = validation.status.toScanStatus()
 
-                                val newScan = ScanItem(
-                                    id = System.currentTimeMillis().toString(),
-                                    attendeeName = validation.holderName
-                                        ?: "Unknown Attendee",
-                                    ticketCode = validation.ticketCode,
-                                    time = "Just now",
-                                    status = status,
-                                    isSynced = false,
-                                    event = validation.event ?: ""
-                                )
+                                    val newScan = ScanItem(
+                                        id = System.currentTimeMillis().toString(),
+                                        attendeeName = validation.holderName
+                                            ?: "Unknown Attendee",
+                                        ticketCode = validation.ticketCode,
+                                        time = "Just now",
+                                        status = status,
+                                        isSynced = false,
+                                        event = validation.event ?: ""
+                                    )
 
-                                scanHistoryItems =
-                                    listOf(newScan) + scanHistoryItems
+                                    scanHistoryItems =
+                                        listOf(newScan) + scanHistoryItems
 
-                                lastValidation = validation
-                                isVerifying = false
-                                showTicketResult = true
+                                    lastValidation = validation
+                                    isVerifying = false
+                                    showTicketResult = true
 
-                                // Update statistics
-                                scanStats = scanStats.copy(
-                                    scannedCount = scanStats.scannedCount + 1,
+                                    // Update statistics
+                                    scanStats = scanStats.copy(
+                                        scannedCount = scanStats.scannedCount + 1,
 
-                                    validCount = scanStats.validCount +
-                                            if (status == ScanStatus.VALID) 1 else 0,
+                                        validCount = scanStats.validCount +
+                                                if (status == ScanStatus.VALID) 1 else 0,
 
-                                    rejectedCount = scanStats.rejectedCount +
-                                            if (status != ScanStatus.VALID) 1 else 0,
+                                        rejectedCount = scanStats.rejectedCount +
+                                                if (status != ScanStatus.VALID) 1 else 0,
 
-                                    isOnline = true
-                                )
+                                        isOnline = true
+                                    )
+                                }
                             }
-                        }
-                    )
-                }
+                        )
+                    }
 
 
-                // HISTORY
-                NavTab.HISTORY -> {
+                    // HISTORY
+                    NavTab.HISTORY -> {
 
-                    HistoryScreen(
-                        items = scanHistoryItems,
-                        selectedTab = selectedTab,
-                        onTabSelected = {
-                            selectedTab = it
-                        },
-                        onClearHistory = {
-                            scanHistoryItems = emptyList()
-                        },
-                        onDeleteTicket = { ticketId ->
-                            scanHistoryItems = scanHistoryItems.filter { it.id != ticketId }
-                        },
-                        isDarkMode = isDarkMode
-                    )
-                }
+                        HistoryScreen(
+                            items = scanHistoryItems,
+                            selectedTab = selectedTab,
+                            onTabSelected = { tab ->
+                                selectedTab = tab
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(tab.ordinal)
+                                }
+                            },
+                            onClearHistory = {
+                                scanHistoryItems = emptyList()
+                            },
+                            onDeleteTicket = { ticketId ->
+                                scanHistoryItems = scanHistoryItems.filter { it.id != ticketId }
+                            },
+                            isDarkMode = isDarkMode
+                        )
+                    }
 
 
-                // ALERTS
-                NavTab.ALERTS -> {
+                    // ALERTS
+                    NavTab.ALERTS -> {
 
-                    AlertsScreen(
-                        notifications = notificationItems,
-                        selectedTab = selectedTab,
-                        isDarkMode = isDarkMode,
+                        AlertsScreen(
+                            notifications = notificationItems,
+                            selectedTab = selectedTab,
+                            isDarkMode = isDarkMode,
 
-                        onTabSelected = {
-                            selectedTab = it
-                        },
+                            onTabSelected = { tab ->
+                                selectedTab = tab
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(tab.ordinal)
+                                }
+                            },
 
-                        onMarkAllAsRead = {
-                            notificationItems = notificationItems.map {
-                                it.copy(isRead = true)
+                            onMarkAllAsRead = {
+                                notificationItems = notificationItems.map {
+                                    it.copy(isRead = true)
+                                }
                             }
-                        }
-                    )
-                }
+                        )
+                    }
 
 
-                // SETTINGS
-                NavTab.SETTINGS -> {
+                    // SETTINGS
+                    NavTab.SETTINGS -> {
 
-                    SettingsScreen(
-                        selectedTab = selectedTab,
-                        isDarkMode = isDarkMode,
-                        onToggleDarkMode = onToggleDarkMode,
+                        SettingsScreen(
+                            selectedTab = selectedTab,
+                            isDarkMode = isDarkMode,
+                            onToggleDarkMode = onToggleDarkMode,
 
-                        onTabSelected = {
-                            selectedTab = it
-                        },
+                            onTabSelected = { tab ->
+                                selectedTab = tab
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(tab.ordinal)
+                                }
+                            },
 
-                        onToggleOffline = {
-                            isOfflineMode = true
-                        },
+                            onToggleOffline = {
+                                isOfflineMode = true
+                            },
 
-                        onLogout = {
-                            isLoggedIn = false
-                            loginError = null
-                        }
-                    )
+                            onLogout = {
+                                isLoggedIn = false
+                                loginError = null
+                            }
+                        )
+                    }
                 }
             }
         }
