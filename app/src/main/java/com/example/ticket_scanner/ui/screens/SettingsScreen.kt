@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Vibration
@@ -57,6 +58,7 @@ fun SettingsScreen(
     onToggleDarkMode: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     onToggleOffline: () -> Unit = {},
+    onOpenDownloadedTickets: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     var autoSyncEnabled by remember { mutableStateOf(true) }
@@ -125,6 +127,13 @@ fun SettingsScreen(
                     icon = Icons.Default.Notifications,
                     isChecked = pushNotificationsEnabled,
                     onCheckedChange = { pushNotificationsEnabled = it }
+                )
+
+                SettingItemRow(
+                    title = "Downloaded Tickets",
+                    subtitle = "View offline tickets, local QR codes, and sync status",
+                    icon = Icons.Default.Download,
+                    onClick = onOpenDownloadedTickets
                 )
 
                 SettingItemRow(
