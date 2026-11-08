@@ -50,8 +50,16 @@ private fun PreviewInvalid() = ValidationTheme {
     InvalidResultScreen(
         result = ValidationResult(
             status = ValidationStatus.INVALID,
+<<<<<<< HEAD
             ticketCode = "TM-1234-5678", ticketType = "General", holderName = "unknown",
             event = "Malawi Music Concert", reason = "Ticket not recognised."
+=======
+            ticketCode = "TM-1234-5678",
+            ticketType = "General",
+            holderName = "unknown",
+            event = "Malawi Music Concert",
+            reason = "Ticket not recognised."
+>>>>>>> SharedScanner
         ),
         onScanNext = {}
     )

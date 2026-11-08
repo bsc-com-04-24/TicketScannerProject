@@ -15,7 +15,8 @@ data class ScanItem(
     val ticketCode: String,
     val time: String,
     val status: ScanStatus,
-    val isSynced: Boolean = true
+    val isSynced: Boolean = true,
+    val event: String = ""
 )
 
 enum class NotificationType {
@@ -35,23 +36,16 @@ data class NotificationItem(
 )
 
 data class ScanStats(
-    val scannedCount: Int = 124,
-    val validCount: Int = 112,
-    val rejectedCount: Int = 12,
+    val scannedCount: Int = 0,
+    val validCount: Int = 0,
+    val rejectedCount: Int = 0,
     val isOnline: Boolean = true
 )
 
 object MockData {
     val sampleScanStats = ScanStats()
 
-    val sampleScanItems = listOf(
-        ScanItem("1", "Blessings Chirwa", "TM-7843-2310", "4:32 PM", ScanStatus.VALID, true),
-        ScanItem("2", "Daniel Phiri", "TM-5566-7788", "4:21 PM", ScanStatus.EXPIRED, true),
-        ScanItem("3", "Grace Moyo", "TM-9988-7766", "4:10 PM", ScanStatus.CANCELLED, true),
-        ScanItem("4", "John Banda", "TM-8855-4433", "3:52 PM", ScanStatus.ALREADY_USED, true),
-        ScanItem("5", "Chifundo Kaluwa", "TM-1122-3344", "3:30 PM", ScanStatus.VALID, true),
-        ScanItem("6", "Tiyamike Phiri", "TM-4433-2211", "3:15 PM", ScanStatus.PENDING, false)
-    )
+    val sampleScanItems = emptyList<ScanItem>()
 
     val sampleNotifications = listOf(
         NotificationItem(

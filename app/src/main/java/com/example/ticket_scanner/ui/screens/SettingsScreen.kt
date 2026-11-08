@@ -13,16 +13,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -42,15 +46,18 @@ import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
-import com.example.ticket_scanner.ui.theme.LightBackground
-import com.example.ticket_scanner.ui.theme.TextDark
+import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextMuted
 
 @Composable
 fun SettingsScreen(
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
-    modifier: Modifier = Modifier
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    onToggleOffline: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     var autoSyncEnabled by remember { mutableStateOf(true) }
     var soundVibrationEnabled by remember { mutableStateOf(true) }
@@ -59,7 +66,7 @@ fun SettingsScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -89,6 +96,14 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 SettingToggleRow(
+                    title = "Dark Theme",
+                    subtitle = "Switch between light and dark appearance",
+                    icon = Icons.Default.DarkMode,
+                    isChecked = isDarkMode,
+                    onCheckedChange = onToggleDarkMode
+                )
+
+                SettingToggleRow(
                     title = "Auto Synchronisation",
                     subtitle = "Automatically sync scanned tickets to cloud server",
                     icon = Icons.Default.CloudSync,
@@ -113,15 +128,24 @@ fun SettingsScreen(
                 )
 
                 SettingItemRow(
-                    title = "Scanner Security & Access",
-                    subtitle = "Manage operator PIN and gate permissions",
-                    icon = Icons.Default.Lock
+                    title = "Offline Mode",
+                    subtitle = "Switch to local on-device verification",
+                    icon = Icons.Default.WifiOff,
+                    onClick = onToggleOffline
                 )
 
                 SettingItemRow(
                     title = "About Ticket Scanner",
                     subtitle = "Version 1.0.0 • Build 2025.1",
                     icon = Icons.Default.Info
+                )
+
+                SettingItemRow(
+                    title = "Sign Out",
+                    subtitle = "End operator session and return to login",
+                    icon = Icons.AutoMirrored.Filled.ExitToApp,
+                    tintColor = RejectedRed,
+                    onClick = onLogout
                 )
             }
         }
@@ -130,7 +154,7 @@ fun SettingsScreen(
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
-            isDark = false,
+            isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -146,7 +170,7 @@ fun SettingToggleRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -170,7 +194,7 @@ fun SettingToggleRow(
                     text = title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextDark
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -196,11 +220,15 @@ fun SettingToggleRow(
 fun SettingItemRow(
     title: String,
     subtitle: String,
-    icon: ImageVector
+    icon: ImageVector,
+    tintColor: Color = BluePrimary,
+    onClick: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -213,7 +241,7 @@ fun SettingItemRow(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = BluePrimary,
+                tint = tintColor,
                 modifier = Modifier.size(24.dp)
             )
 
@@ -224,7 +252,7 @@ fun SettingItemRow(
                     text = title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextDark
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(

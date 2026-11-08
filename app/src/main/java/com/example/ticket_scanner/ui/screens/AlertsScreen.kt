@@ -27,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,24 +44,23 @@ import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
-import com.example.ticket_scanner.ui.theme.LightBackground
 import com.example.ticket_scanner.ui.theme.RejectedRed
-import com.example.ticket_scanner.ui.theme.TextDark
 import com.example.ticket_scanner.ui.theme.TextMuted
 import com.example.ticket_scanner.ui.theme.ValidGreen
-//@Preview(showBackground = true)
+
 @Composable
 fun AlertsScreen(
     notifications: List<NotificationItem>,
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
     onMarkAllAsRead: () -> Unit,
+    isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -129,7 +129,7 @@ fun AlertsScreen(
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
-            isDark = false,
+            isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -149,7 +149,7 @@ fun NotificationCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -185,7 +185,7 @@ fun NotificationCard(
                     text = notification.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextDark
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
