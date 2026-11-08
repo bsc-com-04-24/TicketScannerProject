@@ -1,3 +1,4 @@
+
 package com.example.ticket_scanner
 
 import android.os.Bundle
@@ -10,10 +11,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Surface
+<<<<<<< HEAD
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
+=======
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+
+>>>>>>> SharedScanner
 import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
@@ -21,7 +37,11 @@ import com.example.ticket_scanner.model.ScanStatus
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.screens.*
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
+<<<<<<< HEAD
 import com.example.ticket_scanner.util.ScanFeedback
+=======
+
+>>>>>>> SharedScanner
 import com.example.ticket_scanner.validation.domain.TicketValidator
 import com.example.ticket_scanner.validation.model.ScannedTicket
 import com.example.ticket_scanner.validation.model.ValidationResult
@@ -62,6 +82,10 @@ fun TicketScannerMainApp(
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit
 ) {
+<<<<<<< HEAD
+=======
+
+>>>>>>> SharedScanner
     val context = LocalContext.current
 
     var showSplash by remember { mutableStateOf(true) }
@@ -89,8 +113,11 @@ fun TicketScannerMainApp(
     var showTicketResult by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
     var isOfflineMode by remember { mutableStateOf(false) }
+<<<<<<< HEAD
     var showDownloadedTickets by remember { mutableStateOf(false) }
     var selectedTicketDetailId by remember { mutableStateOf<String?>(null) }
+=======
+>>>>>>> SharedScanner
 
     var lastValidation by remember {
         mutableStateOf<ValidationResult?>(null)
@@ -141,6 +168,7 @@ fun TicketScannerMainApp(
             )
         }
 
+<<<<<<< HEAD
         // TICKET DETAIL SCREEN
         else if (selectedTicketDetailId != null) {
             TicketDetailScreen(
@@ -158,14 +186,34 @@ fun TicketScannerMainApp(
                 },
                 isDarkMode = isDarkMode
             )
+=======
+        // VALIDATION RESULT (Online & Offline)
+        else if (showTicketResult && lastValidation != null) {
+
+            ValidationResultScreen(
+                result = lastValidation!!,
+                onScanNext = {
+                    showTicketResult = false
+                }
+            )
+
+>>>>>>> SharedScanner
         }
 
         // OFFLINE SCANNER
         else if (isOfflineMode) {
             OfflineScannerScreen(
+<<<<<<< HEAD
                 onBack = {
                     isOfflineMode = false
                 },
+=======
+
+                onBack = {
+                    isOfflineMode = false
+                },
+
+>>>>>>> SharedScanner
                 onScanTicket = { ticketCode ->
                     val decoded = QrMessageDecoder.decode(ticketCode)
                     val actualTicketCode =
