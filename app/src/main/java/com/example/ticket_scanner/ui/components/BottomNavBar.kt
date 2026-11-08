@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ticket_scanner.ui.theme.BluePrimary
 import com.example.ticket_scanner.ui.theme.DarkSurface
-import com.example.ticket_scanner.ui.theme.
+import com.example.ticket_scanner.ui.theme.TextLightMuted
 import androidx.compose.material.icons.filled.AddCircle
 
 enum class NavTab(
@@ -37,8 +37,7 @@ enum class NavTab(
     SCAN("Scan", Icons.Default.QrCodeScanner),
     HISTORY("History", Icons.Default.History),
     ALERTS("Alerts", Icons.Default.Notifications),
-    SETTINGS("Settings", Icons.Default.Settings)
-
+    SETTINGS("Settings", Icons.Default.Settings),
     CREATE("Create", Icons.Default.AddCircle)
 }
 
