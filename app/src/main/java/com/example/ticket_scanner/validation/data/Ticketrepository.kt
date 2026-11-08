@@ -3,10 +3,6 @@ package com.example.ticket_scanner.validation.data
 import com.example.ticket_scanner.validation.model.TicketRecord
 import java.util.Calendar
 
-/**
- * In-memory ticket records with sample data (they last until the app process ends).
- * Replace this one file with Room or an API later; nothing else needs to change.
- */
 object TicketRepository {
 
     private val records: MutableMap<String, TicketRecord> =
