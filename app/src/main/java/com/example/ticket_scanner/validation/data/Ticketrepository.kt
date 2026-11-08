@@ -18,6 +18,11 @@ object TicketRepository {
         records[code]?.let { records[code] = it.copy(checkedInAt = time, gate = gate) }
     }
 
+    /** Registers a newly created ticket so it can be validated straight away (used by event creation). */
+    fun add(record: TicketRecord) {
+        records[record.code] = record
+    }
+
     private const val EVENT = "Malawi Tech & Innovation Expo"
     private const val TYPE = "General Admission"
 
