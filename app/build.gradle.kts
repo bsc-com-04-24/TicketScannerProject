@@ -25,7 +25,7 @@ android {
 
     buildFeatures {
         compose = true
-    }m54
+    }
 }
 
 dependencies {
