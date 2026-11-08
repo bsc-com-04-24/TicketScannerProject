@@ -32,15 +32,20 @@ import com.example.ticket_scanner.validation.model.ValidationStatus
 import com.example.ticket_scanner.validation.ui.ValidationResultScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.activity.viewModels
+import com.example.ticket_scanner.eventcreation.ui.EventCreationFlow
+import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
+import com.example.ticket_scanner.ui.components.BottomNavBar
 
 class MainActivity : ComponentActivity() {
+    private val eventCreationViewModel: EventCreationViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             TicketScannerTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    TicketScannerMainApp()
+                    TicketScannerMainApp(eventCreationViewModel)
                 }
             }
         }
@@ -48,7 +53,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun TicketScannerMainApp() {
+fun TicketScannerMainApp(eventCreationViewModel:EventCreationViewModel) {
     var showSplash by remember { mutableStateOf(true) }
     var isLoggedIn by remember { mutableStateOf(false) }
     var loginError by remember { mutableStateOf<String?>(null) }
@@ -174,6 +179,19 @@ fun TicketScannerMainApp() {
                     onTabSelected = { selectedTab = it }
                 )
             }
+
+            NavTab.CREATE -> {
+                EventCreationFlow(
+                    viewModel = eventCreationViewModel,
+                    bottomBar = {
+                        BottomNavBar(
+                            selectedTab = selectedTab,
+                            onTabSelected = { selectedTab = it }
+                        )
+                    }
+                )
+            }
+
         }
     }
 }
