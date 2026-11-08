@@ -47,6 +47,8 @@ dependencies {
 
     // Google ML Kit for QR code and barcode scanning
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // ZXing for local QR code generation
+    implementation("com.google.zxing:core:3.5.3")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
