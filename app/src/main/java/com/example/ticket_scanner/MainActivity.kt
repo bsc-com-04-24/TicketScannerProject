@@ -4,20 +4,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
 import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
@@ -35,6 +31,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val eventCreationViewModel: EventCreationViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +43,7 @@ class MainActivity : ComponentActivity() {
             TicketScannerTheme(darkTheme = isDarkMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     TicketScannerMainApp(
+                        eventCreationViewModel = eventCreationViewModel,
                         isDarkMode = isDarkMode,
                         onToggleDarkMode = { enabled ->
                             isDarkMode = enabled
@@ -60,6 +58,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TicketScannerMainApp(
+    eventCreationViewModel: EventCreationViewModel,
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit
 ) {
