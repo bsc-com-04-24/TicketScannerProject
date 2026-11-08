@@ -25,13 +25,13 @@ android {
 
     buildFeatures {
         compose = true
-    }
+    }m54
 }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
-
+    implementation("com.google.zxing:core:3.5.3")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -42,9 +42,6 @@ dependencies {
     // Keep dependencies from ticket-check-in
     implementation(libs.androidx.compose.runtime)
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
-
-    // Keep dependency from SharedScanner
-    implementation(libs.androidx.compose.material.icons.extended)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
