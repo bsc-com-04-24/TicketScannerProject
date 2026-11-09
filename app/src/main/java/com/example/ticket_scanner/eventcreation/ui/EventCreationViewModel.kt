@@ -4,24 +4,36 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.example.ticket_scanner.eventcreation.data.EventRepository
+import androidx.lifecycle.viewModelScope
 import com.example.ticket_scanner.eventcreation.domain.TicketGenerator
 import com.example.ticket_scanner.eventcreation.model.EventDetails
 import com.example.ticket_scanner.eventcreation.model.EventForm
 import com.example.ticket_scanner.eventcreation.model.GeneratedTicket
-import com.example.ticket_scanner.validation.data.TicketRepository
-import com.example.ticket_scanner.validation.model.TicketRecord
+import com.example.ticket_scanner.localdb.LocalTicketStore
+import com.example.ticket_scanner.localdb.StoredEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.TimeZone
 
 /** Which part of the flow is showing. */
 sealed interface EventCreationStep {
+    /** The Create Event form. */
     data object Form : EventCreationStep
+
+    /** The generated QR codes, to review and save. */
     data class Tickets(
         val event: EventDetails,
         val tickets: List<GeneratedTicket>
     ) : EventCreationStep
+
+    /** The list of tickets saved on this phone. */
+    data object SavedList : EventCreationStep
+
+    /** Editing a saved event. */
+    data class EditEvent(val eventId: Long) : EventCreationStep
 }
 
 class EventCreationViewModel : ViewModel() {
@@ -76,7 +88,7 @@ class EventCreationViewModel : ViewModel() {
         quantityError = null
     }
 
-    /** "OK" in the dialog: create the tickets. */
+    /** "OK" in the dialog: generate the tickets and show them for review (not saved yet). */
     fun confirmQuantity() {
         val quantity = quantityInput.toIntOrNull()
         if (quantity == null || quantity < 1 || quantity > TicketGenerator.MAX_TICKETS) {
@@ -91,38 +103,167 @@ class EventCreationViewModel : ViewModel() {
             event = event,
             quantity = quantity,
             ticketType = ticketType,
-            codeExists = { TicketRepository.find(it) != null }
+            // never reuse a code that is already saved on this phone
+            codeExists = { code -> LocalTicketStore.tickets.value.any { it.code == code } }
         )
 
-        // Register the new tickets with validation, so scanning one of these QR codes
-        // gives "Valid" (and "Already used" the second time).
-        val now = System.currentTimeMillis()
-        tickets.forEach { ticket ->
-            TicketRepository.add(
-                TicketRecord(
-                    code = ticket.code,
-                    type = ticket.ticketType,
-                    event = ticket.eventName,
-                    purchasedAt = now,
-                    expiresAt = event.endMillis
-                )
-            )
-        }
-
-        EventRepository.add(event)
-
+        isSaved = false
+        isSaving = false
+        saveError = null
         showQuantityDialog = false
         _step.value = EventCreationStep.Tickets(event, tickets)
     }
 
-    /** "Done" on the tickets screen, or Back: clear everything and start again. */
+    // ---- Saving the generated tickets ----
+    var isSaving by mutableStateOf(false)
+        private set
+
+    var isSaved by mutableStateOf(false)
+        private set
+
+    var saveError by mutableStateOf<String?>(null)
+        private set
+
+    /** "Save tickets": store the event and its tickets in the phone's database. */
+    fun saveTickets() {
+        val current = _step.value as? EventCreationStep.Tickets ?: return
+        if (isSaving || isSaved) return
+
+        isSaving = true
+        saveError = null
+        viewModelScope.launch {
+            try {
+                LocalTicketStore.saveEventWithTickets(current.event, current.tickets)
+                isSaved = true
+            } catch (e: Exception) {
+                saveError = "Could not save the tickets. Try again."
+            }
+            isSaving = false
+        }
+    }
+
+    /** Back or "Discard and edit" before saving: return to the form, keeping what was typed. */
+    fun discardTickets() {
+        _step.value = EventCreationStep.Form
+    }
+
+    // ---- Saved tickets list ----
+    fun openSavedTickets() {
+        _step.value = EventCreationStep.SavedList
+    }
+
+    fun closeSavedTickets() {
+        _step.value = EventCreationStep.Form
+    }
+
+    /** "View saved tickets" right after saving: clear the form, then open the list. */
+    fun viewSavedAfterSave() {
+        resetAll()
+        _step.value = EventCreationStep.SavedList
+    }
+
+    fun deleteTicket(code: String) {
+        viewModelScope.launch {
+            runCatching { LocalTicketStore.deleteTicket(code) }
+        }
+    }
+
+    fun deleteEvent(eventId: Long) {
+        viewModelScope.launch {
+            runCatching { LocalTicketStore.deleteEvent(eventId) }
+        }
+    }
+
+    // ---- Editing a saved event ----
+    var editForm by mutableStateOf(EventForm())
+        private set
+
+    var editShowErrors by mutableStateOf(false)
+        private set
+
+    var isUpdating by mutableStateOf(false)
+        private set
+
+    var editError by mutableStateOf<String?>(null)
+        private set
+
+    /** "Edit event": load the event from the database into the form. */
+    fun startEditEvent(eventId: Long) {
+        viewModelScope.launch {
+            val event = LocalTicketStore.getEvent(eventId) ?: return@launch
+            editForm = event.toForm()
+            editShowErrors = false
+            editError = null
+            isUpdating = false
+            _step.value = EventCreationStep.EditEvent(eventId)
+        }
+    }
+
+    fun onEditFormChange(newForm: EventForm) {
+        editForm = newForm
+    }
+
+    /** "Save changes": write the new details to the database (and to all the event's tickets). */
+    fun saveEventChanges() {
+        val current = _step.value as? EventCreationStep.EditEvent ?: return
+        if (isUpdating) return
+        if (!editForm.errors().isValid) {
+            editShowErrors = true
+            return
+        }
+
+        isUpdating = true
+        editError = null
+        viewModelScope.launch {
+            try {
+                LocalTicketStore.updateEvent(current.eventId, editForm.toEventDetails())
+                _step.value = EventCreationStep.SavedList
+            } catch (e: Exception) {
+                editError = "Could not save the changes. Try again."
+            }
+            isUpdating = false
+        }
+    }
+
+    fun cancelEdit() {
+        _step.value = EventCreationStep.SavedList
+    }
+
+    // ---- Finish ----
+    /** "Done" after saving: clear everything and start a new event. */
     fun done() {
+        resetAll()
+        _step.value = EventCreationStep.Form
+    }
+
+    private fun resetAll() {
         form = EventForm()
         showErrors = false
         quantityInput = "10"
         ticketTypeInput = "General Admission"
         quantityError = null
         showQuantityDialog = false
-        _step.value = EventCreationStep.Form
+        isSaving = false
+        isSaved = false
+        saveError = null
     }
+}
+
+/** Fills the form from a saved event. The date picker uses midnight UTC for the chosen day. */
+private fun StoredEvent.toForm(): EventForm {
+    val start = Calendar.getInstance().apply { timeInMillis = startMillis }
+    val end = Calendar.getInstance().apply { timeInMillis = endMillis }
+    val dateUtc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        clear()
+        set(start.get(Calendar.YEAR), start.get(Calendar.MONTH), start.get(Calendar.DAY_OF_MONTH))
+    }.timeInMillis
+
+    return EventForm(
+        name = name,
+        description = description,
+        venue = venue,
+        dateUtcMillis = dateUtc,
+        startMinutes = start.get(Calendar.HOUR_OF_DAY) * 60 + start.get(Calendar.MINUTE),
+        endMinutes = end.get(Calendar.HOUR_OF_DAY) * 60 + end.get(Calendar.MINUTE)
+    )
 }
