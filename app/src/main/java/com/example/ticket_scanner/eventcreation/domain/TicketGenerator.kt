@@ -8,15 +8,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-/**
- * Creates the tickets for an event.
- *
- * Ticket codes look like the sample ticket: initials of the event name, the year,
- * and a 6-digit number (for example MTIE-2026-000001).
- *
- * The QR code carries a small JSON text with dummy ticket details. The keys
- * (ticketId, ticketType, event) are the ones the scanner and validation already read.
- */
+
 object TicketGenerator {
 
     const val MAX_TICKETS = 100
@@ -34,8 +26,6 @@ object TicketGenerator {
         val prefix = codePrefix(event.name)
         val year = Calendar.getInstance().apply { timeInMillis = event.startMillis }
             .get(Calendar.YEAR)
-        val dateText = SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault())
-            .format(Date(event.startMillis))
 
         val tickets = ArrayList<GeneratedTicket>(quantity)
         var sequence = 0
@@ -46,14 +36,6 @@ object TicketGenerator {
             if (codeExists(code)) continue
 
             val number = tickets.size + 1
-            val payload = JSONObject().apply {
-                put("ticketId", code)
-                put("ticketType", ticketType)
-                put("event", event.name)
-                put("date", dateText)
-                put("ticketNo", "$number of $quantity")
-            }.toString()
-
             tickets.add(
                 GeneratedTicket(
                     code = code,
@@ -63,11 +45,38 @@ object TicketGenerator {
                     startMillis = event.startMillis,
                     ticketNumber = number,
                     totalTickets = quantity,
-                    qrPayload = payload
+                    qrPayload = buildPayload(
+                        code = code,
+                        ticketType = ticketType,
+                        eventName = event.name,
+                        startMillis = event.startMillis,
+                        ticketNumber = number,
+                        totalTickets = quantity
+                    )
                 )
             )
         }
         return tickets
+    }
+
+    /** The text a ticket's QR code carries. */
+    fun buildPayload(
+        code: String,
+        ticketType: String,
+        eventName: String,
+        startMillis: Long,
+        ticketNumber: Int,
+        totalTickets: Int
+    ): String {
+        val dateText = SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault())
+            .format(Date(startMillis))
+        return JSONObject().apply {
+            put("ticketId", code)
+            put("ticketType", ticketType)
+            put("event", eventName)
+            put("date", dateText)
+            put("ticketNo", "$ticketNumber of $totalTickets")
+        }.toString()
     }
 
     /** "Malawi Tech & Innovation Expo" becomes "MTIE". */
