@@ -1,4 +1,3 @@
-
 package com.example.ticket_scanner
 
 import android.os.Bundle
@@ -11,12 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Surface
-
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,20 +17,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-
-
+import com.example.ticket_scanner.eventcreation.ui.EventCreationFlow
+import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
 import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
+import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.screens.*
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
 import com.example.ticket_scanner.util.ScanFeedback
-
-
 import com.example.ticket_scanner.validation.domain.TicketValidator
 import com.example.ticket_scanner.validation.model.ScannedTicket
 import com.example.ticket_scanner.validation.model.ValidationResult
@@ -158,7 +150,6 @@ fun TicketScannerMainApp(
             )
         }
 
-
         // TICKET DETAIL SCREEN
         else if (selectedTicketDetailId != null) {
             TicketDetailScreen(
@@ -178,16 +169,6 @@ fun TicketScannerMainApp(
             )
         }
 
-        // VALIDATION RESULT (Online & Offline)
-        else if (showTicketResult && lastValidation != null) {
-            ValidationResultScreen(
-                result = lastValidation!!,
-                onScanNext = {
-                    showTicketResult = false
-                }
-            )
-        }
-
         // OFFLINE SCANNER
         else if (isOfflineMode) {
             OfflineScannerScreen(
@@ -196,7 +177,6 @@ fun TicketScannerMainApp(
                 },
                 onScanTicket = { ticketCode ->
                     val decoded = QrMessageDecoder.decode(ticketCode)
-
                     val actualTicketCode =
                         decoded.fields["ticketId"]
                             ?: decoded.fields["ticketCode"]
@@ -288,6 +268,8 @@ fun TicketScannerMainApp(
                             stats = scanStats,
                             selectedTab = selectedTab,
                             isDarkMode = isDarkMode,
+                            recentScans = scanHistoryItems.take(5),
+                            lastValidationResult = lastValidation,
                             onTabSelected = { tab ->
                                 selectedTab = tab
                                 coroutineScope.launch {
@@ -394,6 +376,25 @@ fun TicketScannerMainApp(
                                 notificationItems = notificationItems.map {
                                     it.copy(isRead = true)
                                 }
+                            }
+                        )
+                    }
+
+                    // CREATE EVENT
+                    NavTab.CREATE -> {
+                        EventCreationFlow(
+                            viewModel = eventCreationViewModel,
+                            bottomBar = {
+                                BottomNavBar(
+                                    selectedTab = selectedTab,
+                                    onTabSelected = { tab ->
+                                        selectedTab = tab
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(tab.ordinal)
+                                        }
+                                    },
+                                    isDark = isDarkMode
+                                )
                             }
                         )
                     }

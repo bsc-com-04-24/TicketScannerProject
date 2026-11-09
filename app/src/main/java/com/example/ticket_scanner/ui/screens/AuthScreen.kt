@@ -24,6 +24,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -63,7 +64,7 @@ fun AuthScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(BlueDarkBackground),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Card(
@@ -71,7 +72,7 @@ fun AuthScreen(
                 .fillMaxWidth()
                 .padding(24.dp),
             colors = CardDefaults.cardColors(
-                containerColor = DarkSurface
+                containerColor = MaterialTheme.colorScheme.surface
             ),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
@@ -105,7 +106,7 @@ fun AuthScreen(
 
                 Text(
                     text = "Event Ticket Scanner",
-                    color = TextLight,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -115,7 +116,7 @@ fun AuthScreen(
 
                 Text(
                     text = "Sign in to access scanner",
-                    color = TextLightMuted,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
                 )
@@ -142,18 +143,18 @@ fun AuthScreen(
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Username",
-                            tint = TextLightMuted
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BluePrimary,
-                        unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         focusedLabelColor = BluePrimary,
-                        unfocusedLabelColor = TextLightMuted,
-                        focusedTextColor = TextLight,
-                        unfocusedTextColor = TextLight
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -169,7 +170,7 @@ fun AuthScreen(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = "Password",
-                            tint = TextLightMuted
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     },
                     trailingIcon = {
@@ -177,7 +178,7 @@ fun AuthScreen(
                             Icon(
                                 imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                                 contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
-                                tint = TextLightMuted
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                         }
                     },
@@ -187,11 +188,11 @@ fun AuthScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BluePrimary,
-                        unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         focusedLabelColor = BluePrimary,
-                        unfocusedLabelColor = TextLightMuted,
-                        focusedTextColor = TextLight,
-                        unfocusedTextColor = TextLight
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )

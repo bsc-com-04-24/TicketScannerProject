@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -19,8 +19,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -30,13 +30,18 @@ android {
 
 kotlin {
     compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        jvmTarget.set(
+            org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        )
     }
 }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
+
+    implementation("com.google.zxing:core:3.5.3")
+
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     // CameraX libraries for camera preview and image analysis
@@ -49,6 +54,7 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     // ZXing for local QR code generation
     implementation("com.google.zxing:core:3.5.3")
+
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

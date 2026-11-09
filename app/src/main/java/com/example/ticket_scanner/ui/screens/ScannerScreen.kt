@@ -11,17 +11,24 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,9 +38,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.OfflinePin
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,22 +61,29 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStats
+import com.example.ticket_scanner.model.ScanStatus
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueCardBackground
 import com.example.ticket_scanner.ui.theme.BlueDarkBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
+import com.example.ticket_scanner.ui.theme.ExpiredOrange
+import com.example.ticket_scanner.ui.theme.PendingGray
 import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextLight
 import com.example.ticket_scanner.ui.theme.TextLightMuted
 import com.example.ticket_scanner.ui.theme.TextMuted
 import com.example.ticket_scanner.ui.theme.ValidGreen
 import com.example.ticket_scanner.validation.data.SampleScans
+import com.example.ticket_scanner.validation.model.ValidationResult
+import com.example.ticket_scanner.validation.model.ValidationStatus
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
 @Composable
@@ -76,7 +94,9 @@ fun ScannerScreen(
     onVerifyTicket: (String) -> Unit,
     isDarkMode: Boolean = true,
     modifier: Modifier = Modifier,
-    onOpenOfflineMode: () -> Unit = {}
+    onOpenOfflineMode: () -> Unit = {},
+    recentScans: List<ScanItem> = emptyList(),
+    lastValidationResult: ValidationResult? = null
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -105,9 +125,18 @@ fun ScannerScreen(
     var isFlashOn by remember { mutableStateOf(false) }
     var cameraControlRef by remember { mutableStateOf<Camera?>(null) }
     var isScanningEnabled by remember { mutableStateOf(true) }
+    var isContinuousMode by remember { mutableStateOf(false) }
 
-    // Always use the latest verification callback.
+    // Always use the latest verification callback
     val currentVerifyCallback by rememberUpdatedState(onVerifyTicket)
+
+    // Auto-resume scanning in continuous mode after delay
+    LaunchedEffect(isScanningEnabled, isContinuousMode) {
+        if (!isScanningEnabled && isContinuousMode) {
+            delay(2000)
+            isScanningEnabled = true
+        }
+    }
 
     Box(
         modifier = modifier
@@ -150,7 +179,7 @@ fun ScannerScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // ONLINE STATUS
+                    // ONLINE STATUS BADGE
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
@@ -178,12 +207,11 @@ fun ScannerScreen(
                         )
                     }
 
-                    // FLASHLIGHT
+                    // FLASHLIGHT TOGGLE
                     IconButton(
                         onClick = {
                             isFlashOn = !isFlashOn
-                            cameraControlRef?.cameraControl
-                                ?.enableTorch(isFlashOn)
+                            cameraControlRef?.cameraControl?.enableTorch(isFlashOn)
                         },
                         modifier = Modifier
                             .size(38.dp)
@@ -195,8 +223,7 @@ fun ScannerScreen(
                             )
                     ) {
                         Icon(
-                            if (isFlashOn) Icons.Default.FlashOn
-                            else Icons.Default.FlashOff,
+                            if (isFlashOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
                             contentDescription = "Toggle flashlight",
                             tint = if (isFlashOn || isDarkMode) Color.White else MaterialTheme.colorScheme.onSurface
                         )
@@ -204,11 +231,61 @@ fun ScannerScreen(
                 }
             }
 
-            // OFFLINE MODE NAVIGATION
+            // RECENT SCAN TOAST / BANNER
+            AnimatedVisibility(
+                visible = lastValidationResult != null,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
+            ) {
+                lastValidationResult?.let { result ->
+                    val bannerBg = when (result.status) {
+                        ValidationStatus.VALID -> ValidGreen
+                        ValidationStatus.INVALID -> RejectedRed
+                        ValidationStatus.EXPIRED -> ExpiredOrange
+                        ValidationStatus.ALREADY_USED -> Color(0xFF8B5CF6)
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bannerBg)
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                if (result.status == ValidationStatus.VALID) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = result.status.name,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${result.holderName ?: "Attendee"} • ${result.ticketCode}",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // OFFLINE MODE NAVIGATION CARD
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
                     .clickable { onOpenOfflineMode() },
                 colors = CardDefaults.cardColors(
                     containerColor = if (isDarkMode) Color(0xFF173A4D) else cardBg
@@ -253,9 +330,9 @@ fun ScannerScreen(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
 
-            // STATISTICS
+            // SCAN STATISTICS CARDS
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -290,20 +367,72 @@ fun ScannerScreen(
                 )
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // CAMERA VIEWFINDER
+            // CONTINUOUS SCAN MODE & CONTROLS BAR
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isContinuousMode) BluePrimary.copy(alpha = 0.2f)
+                            else if (isDarkMode) Color.White.copy(alpha = 0.08f)
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
+                        .clickable { isContinuousMode = !isContinuousMode }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Timer,
+                        contentDescription = "Continuous Mode",
+                        tint = if (isContinuousMode) BluePrimary else textMutedColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = if (isContinuousMode) "Continuous Mode: ON" else "Continuous Mode: OFF",
+                        color = if (isContinuousMode) BluePrimary else textColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (recentScans.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.History,
+                            contentDescription = null,
+                            tint = textMutedColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "${recentScans.size} recent",
+                            color = textMutedColor,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+
+            // CAMERA VIEWFINDER BOX
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
                     .height(290.dp)
                     .clip(RoundedCornerShape(24.dp))
                     .background(cardBg),
                 contentAlignment = Alignment.Center
             ) {
                 if (hasCameraPermission) {
-
                     CameraPreviewView(
                         isScanningEnabled = isScanningEnabled,
                         onBarcodeDetected = { code ->
@@ -319,18 +448,18 @@ fun ScannerScreen(
 
                     ScannerReticleOverlay()
 
-                    if (!isScanningEnabled) {
+                    if (!isScanningEnabled && !isContinuousMode) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.55f)),
+                                .background(Color.Black.copy(alpha = 0.6f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    "Ticket captured!",
+                                    "Ticket Captured!",
                                     color = Color.White,
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Bold
@@ -351,7 +480,6 @@ fun ScannerScreen(
                             }
                         }
                     }
-
                 } else {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -392,9 +520,23 @@ fun ScannerScreen(
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            // RECENT SCANS MINI CAROUSEL
+            if (recentScans.isNotEmpty()) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(recentScans.take(5)) { scanItem ->
+                        RecentScanMiniChip(scanItem, isDarkMode = isDarkMode)
+                    }
+                }
+            }
 
-            // MANUAL TICKET ENTRY
+            Spacer(Modifier.height(10.dp))
+
+            // MANUAL TICKET ENTRY CARD
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -448,9 +590,7 @@ fun ScannerScreen(
                                 onDone = {
                                     if (manualCodeInput.isNotBlank()) {
                                         focusManager.clearFocus()
-                                        currentVerifyCallback(
-                                            manualCodeInput.trim()
-                                        )
+                                        currentVerifyCallback(manualCodeInput.trim())
                                         manualCodeInput = ""
                                     }
                                 }
@@ -459,12 +599,9 @@ fun ScannerScreen(
                                 focusedTextColor = textColor,
                                 unfocusedTextColor = textColor,
                                 focusedBorderColor = BluePrimary,
-                                unfocusedBorderColor =
-                                    if (isDarkMode) Color.White.copy(alpha = 0.15f) else Color(0xFFE2E8F0),
-                                focusedContainerColor =
-                                    if (isDarkMode) Color.White.copy(alpha = 0.05f) else MaterialTheme.colorScheme.background,
-                                unfocusedContainerColor =
-                                    if (isDarkMode) Color.White.copy(alpha = 0.05f) else MaterialTheme.colorScheme.background
+                                unfocusedBorderColor = if (isDarkMode) Color.White.copy(alpha = 0.15f) else Color(0xFFE2E8F0),
+                                focusedContainerColor = if (isDarkMode) Color.White.copy(alpha = 0.05f) else MaterialTheme.colorScheme.background,
+                                unfocusedContainerColor = if (isDarkMode) Color.White.copy(alpha = 0.05f) else MaterialTheme.colorScheme.background
                             ),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
@@ -476,9 +613,7 @@ fun ScannerScreen(
                             onClick = {
                                 if (manualCodeInput.isNotBlank()) {
                                     focusManager.clearFocus()
-                                    currentVerifyCallback(
-                                        manualCodeInput.trim()
-                                    )
+                                    currentVerifyCallback(manualCodeInput.trim())
                                     manualCodeInput = ""
                                 }
                             },
@@ -500,7 +635,7 @@ fun ScannerScreen(
 
             Spacer(Modifier.height(14.dp))
 
-            // DEMO SAMPLES
+            // DEMO SAMPLES CHIPS
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -521,26 +656,11 @@ fun ScannerScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     SampleScans.all.forEach { sample ->
-
-                        val label =
-                            sample.expectedOutcome.substringBefore(" ")
-
+                        val label = sample.expectedOutcome.substringBefore(" ")
                         val chipColor = when {
-                            label.contains(
-                                "Valid",
-                                ignoreCase = true
-                            ) -> ValidGreen
-
-                            label.contains(
-                                "Invalid",
-                                ignoreCase = true
-                            ) -> RejectedRed
-
-                            label.contains(
-                                "Expired",
-                                ignoreCase = true
-                            ) -> Color(0xFFF59E0B)
-
+                            label.contains("Valid", ignoreCase = true) -> ValidGreen
+                            label.contains("Invalid", ignoreCase = true) -> RejectedRed
+                            label.contains("Expired", ignoreCase = true) -> ExpiredOrange
                             else -> Color(0xFF9333EA)
                         }
 
@@ -554,9 +674,7 @@ fun ScannerScreen(
                                     RoundedCornerShape(10.dp)
                                 )
                                 .clickable {
-                                    currentVerifyCallback(
-                                        sample.ticket.ticketCode
-                                    )
+                                    currentVerifyCallback(sample.ticket.ticketCode)
                                 }
                                 .padding(
                                     horizontal = 12.dp,
@@ -585,7 +703,7 @@ fun ScannerScreen(
             Spacer(Modifier.height(16.dp))
         }
 
-        // BOTTOM NAVIGATION
+        // BOTTOM NAVIGATION BAR
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
@@ -594,10 +712,6 @@ fun ScannerScreen(
         )
     }
 }
-
-// --------------------------------------------------
-// STATISTICS CARD
-// --------------------------------------------------
 
 @Composable
 private fun StatCard(
@@ -616,9 +730,7 @@ private fun StatCard(
         shape = RoundedCornerShape(14.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 10.dp),
+            modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -639,9 +751,56 @@ private fun StatCard(
     }
 }
 
-// --------------------------------------------------
-// CAMERA PREVIEW + ML KIT QR SCANNER
-// --------------------------------------------------
+@Composable
+private fun RecentScanMiniChip(
+    item: ScanItem,
+    isDarkMode: Boolean
+) {
+    val statusColor = when (item.status) {
+        ScanStatus.VALID -> ValidGreen
+        ScanStatus.EXPIRED -> ExpiredOrange
+        ScanStatus.CANCELLED, ScanStatus.REJECTED -> RejectedRed
+        ScanStatus.ALREADY_USED -> Color(0xFF8B5CF6)
+        ScanStatus.PENDING -> PendingGray
+    }
+
+    val cardBg = if (isDarkMode) BlueCardBackground else MaterialTheme.colorScheme.surface
+    val textColor = if (isDarkMode) TextLight else MaterialTheme.colorScheme.onSurface
+    val textMutedColor = if (isDarkMode) TextLightMuted else TextMuted
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
+            )
+            Spacer(Modifier.width(6.dp))
+            Column {
+                Text(
+                    text = item.attendeeName,
+                    color = textColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = item.ticketCode,
+                    color = textMutedColor,
+                    fontSize = 9.sp,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
 
 @androidx.annotation.OptIn(ExperimentalGetImage::class)
 @Composable
@@ -650,11 +809,8 @@ fun CameraPreviewView(
     onBarcodeDetected: (String) -> Unit,
     onCameraBound: (Camera) -> Unit
 ) {
-    val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Keep callbacks and scanning state updated without
-    // recreating the camera analyzer on every recomposition.
     val currentScanningState by rememberUpdatedState(isScanningEnabled)
     val currentBarcodeCallback by rememberUpdatedState(onBarcodeDetected)
     val currentCameraBoundCallback by rememberUpdatedState(onCameraBound)
@@ -677,9 +833,7 @@ fun CameraPreviewView(
 
     AndroidView(
         factory = { ctx ->
-            val previewView = PreviewView(ctx).apply {
-                scaleType = PreviewView.ScaleType.FILL_CENTER
-            }
+            val previewView = PreviewView(ctx)
 
             val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
             cameraProviderFuture.addListener({
@@ -729,9 +883,6 @@ fun CameraPreviewView(
                                     }
                                 }
                             }
-                            .addOnFailureListener {
-                                // Ignore or log scan failures
-                            }
                             .addOnCompleteListener {
                                 imageProxy.close()
                             }
@@ -748,7 +899,7 @@ fun CameraPreviewView(
                     currentCameraBoundCallback(camera)
 
                 } catch (e: Exception) {
-                    // Handle camera binding exceptions
+                    e.printStackTrace()
                 }
             }, ContextCompat.getMainExecutor(ctx))
 
@@ -758,15 +909,9 @@ fun CameraPreviewView(
     )
 }
 
-// --------------------------------------------------
-// ANIMATED SCANNER RETICLE
-// --------------------------------------------------
-
 @Composable
 fun ScannerReticleOverlay() {
-
-    val infiniteTransition =
-        rememberInfiniteTransition(label = "scan_laser")
+    val infiniteTransition = rememberInfiniteTransition(label = "scan_laser")
 
     val laserY by infiniteTransition.animateFloat(
         initialValue = 0.15f,
@@ -785,7 +930,6 @@ fun ScannerReticleOverlay() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-
         Box(
             modifier = Modifier
                 .size(200.dp)
@@ -799,14 +943,14 @@ fun ScannerReticleOverlay() {
         Box(
             modifier = Modifier
                 .size(190.dp)
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 4.dp)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp)
                     .align(Alignment.TopCenter)
-                    .offset(y = (190 * laserY).dp)
+                    .offset(y = (200.dp.value * laserY).dp)
                     .background(BluePrimary)
             )
         }

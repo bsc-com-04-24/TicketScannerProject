@@ -45,7 +45,7 @@ fun GeneratedTicketsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         EventHeader(title = "Tickets created")
 
@@ -81,14 +81,14 @@ fun GeneratedTicketsScreen(
 private fun EventSummary(event: EventDetails, count: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(event.name, color = TextDark, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(event.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
-            Text(formatDateTime(event.startMillis), color = TextMuted, fontSize = 13.sp)
-            Text(event.venue, color = TextMuted, fontSize = 13.sp)
+            Text(formatDateTime(event.startMillis), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 13.sp)
+            Text(event.venue, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 13.sp)
             Spacer(Modifier.height(10.dp))
             Text(
                 text = "$count ticket${if (count == 1) "" else "s"} created. Each QR code below " +
@@ -104,7 +104,7 @@ private fun EventSummary(event: EventDetails, count: Int) {
 private fun TicketCard(ticket: GeneratedTicket) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -120,19 +120,19 @@ private fun TicketCard(ticket: GeneratedTicket) {
             Spacer(Modifier.height(12.dp))
             Text(
                 text = ticket.code,
-                color = TextDark,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = "${ticket.ticketType} · Ticket ${ticket.ticketNumber} of ${ticket.totalTickets}",
-                color = TextMuted,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = ticket.eventName,
-                color = TextMuted,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center
             )

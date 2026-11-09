@@ -68,7 +68,7 @@ fun CreateEventScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
             .imePadding()
     ) {
         EventHeader(title = "Create Event")
@@ -82,7 +82,7 @@ fun CreateEventScreen(
         ) {
             Text(
                 text = "Enter the event details, then create the tickets.",
-                color = TextMuted,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 fontSize = 14.sp
             )
 
