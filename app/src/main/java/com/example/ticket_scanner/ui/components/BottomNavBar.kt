@@ -11,8 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -28,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import com.example.ticket_scanner.ui.theme.BluePrimary
 import com.example.ticket_scanner.ui.theme.DarkSurface
 import com.example.ticket_scanner.ui.theme.TextLightMuted
-import androidx.compose.material.icons.filled.AddCircle
 
 enum class NavTab(
     val title: String,
@@ -36,7 +36,7 @@ enum class NavTab(
 ) {
     SCAN("Scan", Icons.Default.QrCodeScanner),
     HISTORY("History", Icons.Default.History),
-    ALERTS("Alerts", Icons.Default.Notifications),
+    EVENTS("Events", Icons.Default.Event),
     SETTINGS("Settings", Icons.Default.Settings),
     CREATE("Create", Icons.Default.AddCircle)
 }
