@@ -11,17 +11,21 @@ import java.util.Locale
 
 /**
  * The validation rules, checked in this order:
- *  1. Code not in our records, or scanned details don't match the record -> INVALID
- *  2. Past its expiry date                                               -> EXPIRED
- *  3. Already checked in                                                 -> ALREADY_USED
- *  4. Otherwise                                                          -> VALID
+ *  1. Code not saved on this phone  -> INVALID
+ *  2. Past its expiry date          -> EXPIRED
+ *  3. Already checked in            -> ALREADY_USED
+ *  4. Otherwise                     -> VALID
  *     (and the ticket is marked as checked in, so the next scan is ALREADY_USED)
+ *
+ * The scanned ticket CODE is what identifies a ticket. Everything shown on the result
+ * screens (event, dates, venue) comes from the saved record, so if the organiser edits
+ * the event later, old QR codes still work and show the up-to-date details.
  */
 object TicketValidator {
 
     private const val GATE_NAME = "Gate 1"
 
-    fun validate(
+    suspend fun validate(
         scanned: ScannedTicket,
         now: Long = System.currentTimeMillis()
     ): ValidationResult {
@@ -29,10 +33,6 @@ object TicketValidator {
 
         val record = TicketRepository.find(code)
             ?: return invalid(scanned, code, "Ticket not recognised.")
-
-        if (!scanned.matches(record)) {
-            return invalid(scanned, code, "Ticket details do not match our records.")
-        }
 
         return when {
             record.expiresAt < now ->
@@ -54,17 +54,6 @@ object TicketValidator {
             }
         }
     }
-
-    /** Scanned details are only compared when they were actually provided. */
-    private fun ScannedTicket.matches(record: TicketRecord): Boolean =
-        sameOrBlank(ticketType, record.type) &&
-                sameOrBlank(holderName, record.holderName) &&
-                sameOrBlank(event, record.event)
-
-    /** A field is only compared when it was scanned AND our record has a value for it. */
-    private fun sameOrBlank(scanned: String, expected: String?): Boolean =
-        scanned.isBlank() || expected == null ||
-                scanned.trim().equals(expected.trim(), ignoreCase = true)
 
     private fun invalid(scanned: ScannedTicket, code: String, reason: String) =
         ValidationResult(
