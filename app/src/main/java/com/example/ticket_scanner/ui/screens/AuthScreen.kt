@@ -1,18 +1,24 @@
 package com.example.ticket_scanner.ui.screens
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
@@ -22,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,22 +51,42 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ticket_scanner.ui.theme.BlueDarkBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
-import com.example.ticket_scanner.ui.theme.DarkSurface
+import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextLight
 import com.example.ticket_scanner.ui.theme.TextLightMuted
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
+import com.example.ticket_scanner.ui.theme.ValidGreen
+
+enum class AuthMode {
+    SIGN_IN,
+    REGISTER
+}
 
 @Composable
 fun AuthScreen(
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
     errorMessage: String? = null,
-    onLoginClick: (username: String, password: String) -> Unit = { _, _ -> }
+    successMessage: String? = null,
+    onLoginClick: (email: String, password: String) -> Unit = { _, _ -> },
+    onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String) -> Unit = { _, _, _, _ -> },
+    onModeChange: () -> Unit = {}
 ) {
-    var username by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var authMode by remember { mutableStateOf(AuthMode.SIGN_IN) }
+
+    // Form inputs for Sign In
+    var loginEmail by remember { mutableStateOf("") }
+    var loginPassword by remember { mutableStateOf("") }
+
+    // Form inputs for Register
+    var regFullName by remember { mutableStateOf("") }
+    var regEmail by remember { mutableStateOf("") }
+    var regPassword by remember { mutableStateOf("") }
+    var regConfirmPassword by remember { mutableStateOf("") }
+
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -70,7 +97,8 @@ fun AuthScreen(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState()),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
@@ -87,7 +115,7 @@ fun AuthScreen(
                 // Ticket Logo Header (same outline ticket icon as splash)
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(76.dp)
                         .background(
                             color = BluePrimary,
                             shape = RoundedCornerShape(16.dp)
@@ -98,11 +126,11 @@ fun AuthScreen(
                         imageVector = Icons.Outlined.ConfirmationNumber,
                         contentDescription = "Ticket Logo",
                         tint = Color.White,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(44.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = "Event Ticket Scanner",
@@ -112,21 +140,22 @@ fun AuthScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Sign in to access scanner",
+                    text = if (authMode == AuthMode.SIGN_IN) "Sign in to access scanner" else "Create a validator account",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
+                // Error Message Display
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage,
-                        color = com.example.ticket_scanner.ui.theme.RejectedRed,
+                        color = RejectedRed,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center,
@@ -134,88 +163,332 @@ fun AuthScreen(
                     )
                 }
 
-                // Username Input Field
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username or Email") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Username",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BluePrimary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        focusedLabelColor = BluePrimary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Password Input Field
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = "Password",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                            Icon(
-                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-                    },
-                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BluePrimary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        focusedLabelColor = BluePrimary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                // Submit Button
-                Button(
-                    onClick = { onLoginClick(username, password) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BluePrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
+                // Success Message Display
+                if (successMessage != null) {
                     Text(
-                        text = "Sign In",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        text = successMessage,
+                        color = ValidGreen,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
+                }
+
+                Crossfade(targetState = authMode, label = "auth_form_transition") { mode ->
+                    if (mode == AuthMode.SIGN_IN) {
+                        // ==================== SIGN IN FORM ====================
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            OutlinedTextField(
+                                value = loginEmail,
+                                onValueChange = { loginEmail = it },
+                                label = { Text("Email Address") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Email,
+                                        contentDescription = "Email",
+                                        tint = TextLightMuted
+                                    )
+                                },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BluePrimary,
+                                    unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                                    focusedLabelColor = BluePrimary,
+                                    unfocusedLabelColor = TextLightMuted,
+                                    focusedTextColor = TextLight,
+                                    unfocusedTextColor = TextLight
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            OutlinedTextField(
+                                value = loginPassword,
+                                onValueChange = { loginPassword = it },
+                                label = { Text("Password") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Password",
+                                        tint = TextLightMuted
+                                    )
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                            contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                                            tint = TextLightMuted
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BluePrimary,
+                                    unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                                    focusedLabelColor = BluePrimary,
+                                    unfocusedLabelColor = TextLightMuted,
+                                    focusedTextColor = TextLight,
+                                    unfocusedTextColor = TextLight
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Sign In Submit Button
+                            Button(
+                                onClick = { onLoginClick(loginEmail, loginPassword) },
+                                enabled = !isLoading,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = BluePrimary
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp)
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Sign In",
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // Switch to Register Mode Link
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Don't have an account? ",
+                                    color = TextLightMuted,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = "Register",
+                                    color = BluePrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable {
+                                        authMode = AuthMode.REGISTER
+                                        onModeChange()
+                                    }
+                                )
+                            }
+                        }
+                    } else {
+                        // ==================== REGISTER FORM ====================
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // Full Name Input
+                            OutlinedTextField(
+                                value = regFullName,
+                                onValueChange = { regFullName = it },
+                                label = { Text("Full Name") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Full Name",
+                                        tint = TextLightMuted
+                                    )
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BluePrimary,
+                                    unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                                    focusedLabelColor = BluePrimary,
+                                    unfocusedLabelColor = TextLightMuted,
+                                    focusedTextColor = TextLight,
+                                    unfocusedTextColor = TextLight
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Email Address Input
+                            OutlinedTextField(
+                                value = regEmail,
+                                onValueChange = { regEmail = it },
+                                label = { Text("Email Address") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Email,
+                                        contentDescription = "Email",
+                                        tint = TextLightMuted
+                                    )
+                                },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BluePrimary,
+                                    unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                                    focusedLabelColor = BluePrimary,
+                                    unfocusedLabelColor = TextLightMuted,
+                                    focusedTextColor = TextLight,
+                                    unfocusedTextColor = TextLight
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Password Input
+                            OutlinedTextField(
+                                value = regPassword,
+                                onValueChange = { regPassword = it },
+                                label = { Text("Password") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Password",
+                                        tint = TextLightMuted
+                                    )
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                            contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                                            tint = TextLightMuted
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BluePrimary,
+                                    unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                                    focusedLabelColor = BluePrimary,
+                                    unfocusedLabelColor = TextLightMuted,
+                                    focusedTextColor = TextLight,
+                                    unfocusedTextColor = TextLight
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Confirm Password Input
+                            OutlinedTextField(
+                                value = regConfirmPassword,
+                                onValueChange = { regConfirmPassword = it },
+                                label = { Text("Confirm Password") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Confirm Password",
+                                        tint = TextLightMuted
+                                    )
+                                },
+                                trailingIcon = {
+                                    IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                            contentDescription = if (isConfirmPasswordVisible) "Hide password" else "Show password",
+                                            tint = TextLightMuted
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BluePrimary,
+                                    unfocusedBorderColor = TextLightMuted.copy(alpha = 0.4f),
+                                    focusedLabelColor = BluePrimary,
+                                    unfocusedLabelColor = TextLightMuted,
+                                    focusedTextColor = TextLight,
+                                    unfocusedTextColor = TextLight
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Register Submit Button
+                            Button(
+                                onClick = {
+                                    onRegisterClick(
+                                        regFullName,
+                                        regEmail,
+                                        regPassword,
+                                        regConfirmPassword
+                                    )
+                                },
+                                enabled = !isLoading,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = BluePrimary
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp)
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Register",
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // Switch to Sign In Mode Link
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Already have an account? ",
+                                    color = TextLightMuted,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = "Sign In",
+                                    color = BluePrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable {
+                                        authMode = AuthMode.SIGN_IN
+                                        onModeChange()
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -224,7 +497,7 @@ fun AuthScreen(
 
 @Preview(showBackground = true)
 @Composable
-fun AuthScreenPreview() {
+fun AuthScreenSignInPreview() {
     TicketScannerTheme {
         AuthScreen()
     }

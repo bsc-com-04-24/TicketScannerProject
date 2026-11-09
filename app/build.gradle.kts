@@ -37,6 +37,8 @@ kotlin {
 }
 
 dependencies {
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.view)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
 
@@ -63,8 +65,23 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
 
+    // Retrofit for HTTP requests
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+
+// Gson converter for JSON
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
+// OkHttp logging for debugging API requests
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+
     implementation("androidx.compose.runtime:runtime")
+
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation(libs.androidx.material3)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

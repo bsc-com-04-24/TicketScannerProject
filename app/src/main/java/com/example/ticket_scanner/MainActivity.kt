@@ -19,6 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ticket_scanner.eventcreation.ui.EventCreationFlow
 import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
 import com.example.ticket_scanner.model.HistoryStorageManager
@@ -29,6 +30,7 @@ import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.screens.*
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
+import com.example.ticket_scanner.ui.viewmodel.AuthViewModel
 import com.example.ticket_scanner.util.ScanFeedback
 import com.example.ticket_scanner.validation.domain.TicketValidator
 import com.example.ticket_scanner.validation.model.ScannedTicket
@@ -75,6 +77,16 @@ fun TicketScannerMainApp(
     var showSplash by remember { mutableStateOf(true) }
     var isLoggedIn by remember { mutableStateOf(false) }
     var loginError by remember { mutableStateOf<String?>(null) }
+
+    val authViewModel: AuthViewModel = viewModel()
+    val authUiState = authViewModel.uiState
+
+    LaunchedEffect(authUiState.authResponse) {
+        if (authUiState.authResponse != null) {
+            loginError = null
+            isLoggedIn = true
+        }
+    }
 
     var selectedTab by remember { mutableStateOf(NavTab.SCAN) }
 
@@ -135,17 +147,23 @@ fun TicketScannerMainApp(
             )
         }
 
-        // LOGIN SCREEN
+        // LOGIN / REGISTER SCREEN
         else if (!isLoggedIn) {
             AuthScreen(
-                errorMessage = loginError,
-                onLoginClick = { username, password ->
-                    if (username.trim() == "user" && password == "user") {
-                        loginError = null
-                        isLoggedIn = true
-                    } else {
-                        loginError = "Invalid username or password"
-                    }
+                errorMessage = authUiState.errorMessage,
+                successMessage = authUiState.successMessage,
+                isLoading = authUiState.isLoading,
+
+                onLoginClick = { email, password ->
+                    authViewModel.login(email, password)
+                },
+
+                onRegisterClick = { fullName, email, password, confirmPassword ->
+                    authViewModel.register(fullName, email, password, confirmPassword)
+                },
+
+                onModeChange = {
+                    authViewModel.clearMessages()
                 }
             )
         }
