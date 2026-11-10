@@ -54,7 +54,7 @@ fun GeneratedTicketsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         EventHeader(title = if (isSaved) "Tickets saved" else "Review tickets")
 
@@ -126,14 +126,14 @@ private fun EventSummary(event: EventDetails, count: Int, isSaved: Boolean) {
     val plural = if (count == 1) "" else "s"
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(event.name, color = TextDark, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(event.name, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(4.dp))
-            Text(formatDateTime(event.startMillis), color = TextMuted, fontSize = 13.sp)
-            Text(event.venue, color = TextMuted, fontSize = 13.sp)
+            Text(formatDateTime(event.startMillis), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 13.sp)
+            Text(event.venue, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 13.sp)
             Spacer(Modifier.height(10.dp))
             Text(
                 text = if (isSaved) {

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode
@@ -28,8 +29,11 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -43,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ticket_scanner.model.ScanItem
@@ -52,7 +57,6 @@ import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
 import com.example.ticket_scanner.ui.theme.BluePrimary
 import com.example.ticket_scanner.ui.theme.ExpiredOrange
-import com.example.ticket_scanner.ui.theme.LightBackground
 import com.example.ticket_scanner.ui.theme.PendingGray
 import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TextDark
@@ -71,14 +75,20 @@ fun HistoryScreen(
     items: List<ScanItem>,
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
+    onClearHistory: () -> Unit,
+    onDeleteTicket: (String) -> Unit,
+    isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(HistoryFilter.ALL) }
+    var showMenu by remember { mutableStateOf(false) }
 
     val filteredItems = items.filter { item ->
-        val matchesSearch = item.attendeeName.contains(searchQuery, ignoreCase = true) ||
-                item.ticketCode.contains(searchQuery, ignoreCase = true)
+        val matchesSearch = searchQuery.isBlank() ||
+                item.attendeeName.contains(searchQuery, ignoreCase = true) ||
+                item.ticketCode.contains(searchQuery, ignoreCase = true) ||
+                item.event.contains(searchQuery, ignoreCase = true)
 
         val matchesFilter = when (selectedFilter) {
             HistoryFilter.ALL -> true
@@ -98,7 +108,7 @@ fun HistoryScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -121,12 +131,27 @@ fun HistoryScreen(
                     fontWeight = FontWeight.Bold
                 )
 
-                IconButton(onClick = { }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Options",
-                        tint = Color.White
-                    )
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Options",
+                            tint = Color.White
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Clear All History") },
+                            onClick = {
+                                showMenu = false
+                                onClearHistory()
+                            }
+                        )
+                    }
                 }
             }
 
@@ -134,7 +159,7 @@ fun HistoryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp)
             ) {
                 OutlinedTextField(
@@ -142,7 +167,7 @@ fun HistoryScreen(
                     onValueChange = { searchQuery = it },
                     placeholder = {
                         Text(
-                            "Search by code or name...",
+                            "Search by code, name or event...",
                             fontSize = 14.sp,
                             color = TextMuted
                         )
@@ -159,8 +184,11 @@ fun HistoryScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BluePrimary,
                         unfocusedBorderColor = Color(0xFFE2E8F0),
-                        focusedContainerColor = Color(0xFFF8FAFC),
-                        unfocusedContainerColor = Color(0xFFF8FAFC)
+                        focusedContainerColor = MaterialTheme.colorScheme.background,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        cursorColor = BluePrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -189,8 +217,29 @@ fun HistoryScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(filteredItems) { item ->
-                    ScanHistoryCard(scanItem = item)
+                if (filteredItems.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (items.isEmpty()) "No scanned tickets yet.\nScan tickets from the scanner to view history." else "No matching scan records found.",
+                                color = TextMuted,
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    items(filteredItems, key = { it.id }) { item ->
+                        ScanHistoryCard(
+                            scanItem = item,
+                            onDelete = { onDeleteTicket(item.id) }
+                        )
+                    }
                 }
             }
         }
@@ -199,7 +248,7 @@ fun HistoryScreen(
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
-            isDark = false,
+            isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -232,7 +281,8 @@ fun FilterChipItem(
 
 @Composable
 fun ScanHistoryCard(
-    scanItem: ScanItem
+    scanItem: ScanItem,
+    onDelete: () -> Unit
 ) {
     val (statusColor, statusIcon, statusLabel) = when (scanItem.status) {
         ScanStatus.VALID -> Triple(ValidGreen, Icons.Default.QrCode, "Valid")
@@ -245,7 +295,7 @@ fun ScanHistoryCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -280,7 +330,7 @@ fun ScanHistoryCard(
                     text = scanItem.attendeeName,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextDark
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -290,6 +340,15 @@ fun ScanHistoryCard(
                     fontSize = 13.sp,
                     color = TextMuted
                 )
+
+                if (scanItem.event.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = scanItem.event,
+                        fontSize = 12.sp,
+                        color = BluePrimary
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -314,11 +373,29 @@ fun ScanHistoryCard(
                 }
             }
 
-            Text(
-                text = scanItem.time,
-                fontSize = 12.sp,
-                color = TextMuted
-            )
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = scanItem.time,
+                    fontSize = 12.sp,
+                    color = TextMuted
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete record",
+                        tint = TextMuted,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
     }
 }

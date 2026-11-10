@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -37,8 +38,9 @@ enum class NavTab(
     SCAN("Scan", Icons.Default.QrCodeScanner),
     HISTORY("History", Icons.Default.History),
     EVENTS("Events", Icons.Default.Event),
-    SETTINGS("Settings", Icons.Default.Settings),
-    CREATE("Create", Icons.Default.AddCircle)
+    ALERTS("Alerts", Icons.Default.Notifications),
+    CREATE("Create", Icons.Default.AddCircle),
+    SETTINGS("Settings", Icons.Default.Settings)
 }
 
 @Composable
