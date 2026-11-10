@@ -1,4 +1,4 @@
-package com.example.ticket_scanner.localdb
+package com.example.ticket_scanner.eventcreation.localdb
 
 /** One ticket as saved in the phone's database. */
 data class StoredTicket(

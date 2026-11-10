@@ -1,4 +1,4 @@
-package com.example.ticket_scanner.localdb
+package com.example.ticket_scanner.eventcreation.localdb
 
 import android.content.ContentValues
 import android.content.Context
