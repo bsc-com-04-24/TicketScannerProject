@@ -1,6 +1,7 @@
 package com.example.ticket_scanner.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,10 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.DarkMode
@@ -40,9 +43,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
@@ -61,9 +66,20 @@ fun SettingsScreen(
     onOpenDownloadedTickets: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    var autoSyncEnabled by remember { mutableStateOf(true) }
-    var soundVibrationEnabled by remember { mutableStateOf(true) }
-    var pushNotificationsEnabled by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    var autoSyncEnabled by remember {
+        mutableStateOf(HistoryStorageManager.loadAutoSyncEnabled(context))
+    }
+    var soundVibrationEnabled by remember {
+        mutableStateOf(HistoryStorageManager.loadSoundVibrationEnabled(context))
+    }
+    var pushNotificationsEnabled by remember {
+        mutableStateOf(HistoryStorageManager.loadPushNotificationsEnabled(context))
+    }
+
+    var isFastMode by remember {
+        mutableStateOf(HistoryStorageManager.loadFastMode(context))
+    }
 
     Box(
         modifier = modifier
@@ -94,7 +110,8 @@ fun SettingsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 SettingToggleRow(
@@ -106,11 +123,25 @@ fun SettingsScreen(
                 )
 
                 SettingToggleRow(
+                    title = "Fast Scan Mode",
+                    subtitle = "Continuous auto-scan without modal confirmation delays",
+                    icon = Icons.Default.Bolt,
+                    isChecked = isFastMode,
+                    onCheckedChange = { enabled ->
+                        isFastMode = enabled
+                        HistoryStorageManager.saveFastMode(context, enabled)
+                    }
+                )
+
+                SettingToggleRow(
                     title = "Auto Synchronisation",
                     subtitle = "Automatically sync scanned tickets to cloud server",
                     icon = Icons.Default.CloudSync,
                     isChecked = autoSyncEnabled,
-                    onCheckedChange = { autoSyncEnabled = it }
+                    onCheckedChange = { enabled ->
+                        autoSyncEnabled = enabled
+                        HistoryStorageManager.saveAutoSyncEnabled(context, enabled)
+                    }
                 )
 
                 SettingToggleRow(
@@ -118,15 +149,21 @@ fun SettingsScreen(
                     subtitle = "Vibrate and play chime on ticket verification",
                     icon = Icons.Default.Vibration,
                     isChecked = soundVibrationEnabled,
-                    onCheckedChange = { soundVibrationEnabled = it }
+                    onCheckedChange = { enabled ->
+                        soundVibrationEnabled = enabled
+                        HistoryStorageManager.saveSoundVibrationEnabled(context, enabled)
+                    }
                 )
 
                 SettingToggleRow(
-                    title = "Push Notifications",
+                    title = "Push Notifications & Alerts",
                     subtitle = "Receive alert updates during live event scanning",
                     icon = Icons.Default.Notifications,
                     isChecked = pushNotificationsEnabled,
-                    onCheckedChange = { pushNotificationsEnabled = it }
+                    onCheckedChange = { enabled ->
+                        pushNotificationsEnabled = enabled
+                        HistoryStorageManager.savePushNotificationsEnabled(context, enabled)
+                    }
                 )
 
                 SettingItemRow(
@@ -156,6 +193,8 @@ fun SettingsScreen(
                     tintColor = RejectedRed,
                     onClick = onLogout
                 )
+
+                Spacer(Modifier.height(16.dp))
             }
         }
 

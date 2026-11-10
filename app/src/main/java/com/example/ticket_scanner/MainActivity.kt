@@ -23,6 +23,8 @@ import com.example.ticket_scanner.eventcreation.ui.EventCreationFlow
 import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
 import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.model.MockData
+import com.example.ticket_scanner.model.NotificationItem
+import com.example.ticket_scanner.model.NotificationType
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
 import com.example.ticket_scanner.ui.components.BottomNavBar
@@ -37,6 +39,9 @@ import com.example.ticket_scanner.validation.model.ValidationStatus
 import com.example.ticket_scanner.validation.ui.ValidationResultScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private val eventCreationViewModel: EventCreationViewModel by viewModels()
@@ -62,6 +67,11 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+private fun getFormattedCurrentTime(): String {
+    val sdf = SimpleDateFormat("d MMM, h:mm:ss a", Locale.getDefault())
+    return sdf.format(Date())
 }
 
 @Composable
@@ -200,19 +210,41 @@ fun TicketScannerMainApp(
                     }
 
                     val status = validation.status.toScanStatus()
+                    val scanTime = getFormattedCurrentTime()
 
                     val newScan = ScanItem(
                         id = System.currentTimeMillis().toString(),
-                        attendeeName = validation.holderName
-                            ?: "Unknown Attendee",
+                        attendeeName = validation.holderName ?: "Unknown Attendee",
                         ticketCode = validation.ticketCode,
-                        time = "Just now",
+                        time = scanTime,
                         status = status,
                         isSynced = false,
                         event = validation.event ?: ""
                     )
 
                     scanHistoryItems = listOf(newScan) + scanHistoryItems
+
+                    // Generate Alert if Push Notifications setting is ON
+                    if (HistoryStorageManager.loadPushNotificationsEnabled(context)) {
+                        val notifType = when (validation.status) {
+                            ValidationStatus.VALID -> NotificationType.SYNC_SUCCESS
+                            ValidationStatus.ALREADY_USED -> NotificationType.DUPLICATE_CHECKIN
+                            else -> NotificationType.EVENT_ALERT
+                        }
+                        val alertTitle = when (validation.status) {
+                            ValidationStatus.VALID -> "Offline Ticket Validated"
+                            ValidationStatus.ALREADY_USED -> "Duplicate Ticket Alert"
+                            else -> "Offline Scan Rejected"
+                        }
+                        val alert = NotificationItem(
+                            id = System.currentTimeMillis().toString(),
+                            title = alertTitle,
+                            description = "${validation.holderName ?: "Attendee"} (${validation.ticketCode}) • ${validation.status.name}",
+                            timestamp = scanTime,
+                            type = notifType
+                        )
+                        notificationItems = listOf(alert) + notificationItems
+                    }
 
                     scanStats = scanStats.copy(
                         scannedCount = scanStats.scannedCount + 1,
@@ -224,7 +256,10 @@ fun TicketScannerMainApp(
                     )
 
                     lastValidation = validation
-                    showTicketResult = true
+                    val isFastModeActive = HistoryStorageManager.loadFastMode(context)
+                    if (!isFastModeActive) {
+                        showTicketResult = true
+                    }
                 }
             )
         }
@@ -308,23 +343,50 @@ fun TicketScannerMainApp(
                                     }
 
                                     val status = validation.status.toScanStatus()
+                                    val scanTime = getFormattedCurrentTime()
+                                    val isAutoSync = HistoryStorageManager.loadAutoSyncEnabled(context)
 
                                     val newScan = ScanItem(
                                         id = System.currentTimeMillis().toString(),
                                         attendeeName = validation.holderName
                                             ?: "Unknown Attendee",
                                         ticketCode = validation.ticketCode,
-                                        time = "Just now",
+                                        time = scanTime,
                                         status = status,
-                                        isSynced = false,
+                                        isSynced = isAutoSync,
                                         event = validation.event ?: ""
                                     )
 
                                     scanHistoryItems = listOf(newScan) + scanHistoryItems
 
+                                    // Generate Alert if Push Notifications setting is ON
+                                    if (HistoryStorageManager.loadPushNotificationsEnabled(context)) {
+                                        val notifType = when (validation.status) {
+                                            ValidationStatus.VALID -> NotificationType.SYNC_SUCCESS
+                                            ValidationStatus.ALREADY_USED -> NotificationType.DUPLICATE_CHECKIN
+                                            else -> NotificationType.EVENT_ALERT
+                                        }
+                                        val alertTitle = when (validation.status) {
+                                            ValidationStatus.VALID -> "Gate Check-In Approved"
+                                            ValidationStatus.ALREADY_USED -> "Duplicate Ticket Alert"
+                                            else -> "Scan Rejected: ${validation.status.name}"
+                                        }
+                                        val alert = NotificationItem(
+                                            id = System.currentTimeMillis().toString(),
+                                            title = alertTitle,
+                                            description = "${validation.holderName ?: "Attendee"} (${validation.ticketCode}) • ${validation.event ?: "Event"}",
+                                            timestamp = scanTime,
+                                            type = notifType
+                                        )
+                                        notificationItems = listOf(alert) + notificationItems
+                                    }
+
                                     lastValidation = validation
                                     isVerifying = false
-                                    showTicketResult = true
+                                    val isFastModeActive = HistoryStorageManager.loadFastMode(context)
+                                    if (!isFastModeActive) {
+                                        showTicketResult = true
+                                    }
 
                                     scanStats = scanStats.copy(
                                         scannedCount = scanStats.scannedCount + 1,
@@ -356,6 +418,9 @@ fun TicketScannerMainApp(
                             onDeleteTicket = { ticketId ->
                                 scanHistoryItems = scanHistoryItems.filter { it.id != ticketId }
                             },
+                            onDeleteSelectedTickets = { selectedIds ->
+                                scanHistoryItems = scanHistoryItems.filter { it.id !in selectedIds }
+                            },
                             isDarkMode = isDarkMode
                         )
                     }
@@ -376,6 +441,15 @@ fun TicketScannerMainApp(
                                 notificationItems = notificationItems.map {
                                     it.copy(isRead = true)
                                 }
+                            },
+                            onDeleteNotification = { notifId ->
+                                notificationItems = notificationItems.filter { it.id != notifId }
+                            },
+                            onDeleteSelectedNotifications = { selectedIds ->
+                                notificationItems = notificationItems.filter { it.id !in selectedIds }
+                            },
+                            onClearAllNotifications = {
+                                notificationItems = emptyList()
                             }
                         )
                     }

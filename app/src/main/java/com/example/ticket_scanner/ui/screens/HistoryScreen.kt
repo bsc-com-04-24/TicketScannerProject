@@ -1,5 +1,10 @@
 package com.example.ticket_scanner.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,17 +28,25 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -77,12 +90,17 @@ fun HistoryScreen(
     onTabSelected: (NavTab) -> Unit,
     onClearHistory: () -> Unit,
     onDeleteTicket: (String) -> Unit,
+    onDeleteSelectedTickets: (Set<String>) -> Unit = {},
     isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(HistoryFilter.ALL) }
     var showMenu by remember { mutableStateOf(false) }
+
+    // Multi-Selection State
+    var isSelectionMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<String>()) }
 
     val filteredItems = items.filter { item ->
         val matchesSearch = searchQuery.isBlank() ||
@@ -124,33 +142,131 @@ fun HistoryScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Scan History",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Column {
+                    Text(
+                        text = if (isSelectionMode) "${selectedIds.size} Selected" else "Scan History",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isSelectionMode) {
+                        Text(
+                            text = "Select items to delete",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 11.sp
+                        )
+                    }
+                }
 
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Multi-Select Toggle Button
+                    IconButton(
+                        onClick = {
+                            isSelectionMode = !isSelectionMode
+                            if (!isSelectionMode) selectedIds = emptySet()
+                        }
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Options",
-                            tint = Color.White
+                            imageVector = Icons.Default.SelectAll,
+                            contentDescription = "Toggle Selection Mode",
+                            tint = if (isSelectionMode) Color(0xFFFBBF24) else Color.White
                         )
                     }
 
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Options",
+                                tint = Color.White
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Select All") },
+                                onClick = {
+                                    showMenu = false
+                                    isSelectionMode = true
+                                    selectedIds = items.map { it.id }.toSet()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Clear All History") },
+                                onClick = {
+                                    showMenu = false
+                                    selectedIds = emptySet()
+                                    isSelectionMode = false
+                                    onClearHistory()
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Bulk Delete Action Bar (Shows when items are selected)
+            AnimatedVisibility(
+                visible = isSelectionMode || selectedIds.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.clickable {
+                            selectedIds = if (selectedIds.size == filteredItems.size) emptySet()
+                            else filteredItems.map { it.id }.toSet()
+                        },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Clear All History") },
-                            onClick = {
-                                showMenu = false
-                                onClearHistory()
-                            }
+                        Checkbox(
+                            checked = selectedIds.isNotEmpty() && selectedIds.size == filteredItems.size,
+                            onCheckedChange = { checked ->
+                                selectedIds = if (checked) filteredItems.map { it.id }.toSet() else emptySet()
+                            },
+                            colors = CheckboxDefaults.colors(checkedColor = BluePrimary)
                         )
+                        Text(
+                            text = if (selectedIds.size == filteredItems.size) "Deselect All" else "Select All Filtered",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    if (selectedIds.isNotEmpty()) {
+                        Button(
+                            onClick = {
+                                onDeleteSelectedTickets(selectedIds)
+                                selectedIds = emptySet()
+                                isSelectionMode = false
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = RejectedRed),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.height(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Delete (${selectedIds.size})",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -235,8 +351,14 @@ fun HistoryScreen(
                     }
                 } else {
                     items(filteredItems, key = { it.id }) { item ->
+                        val isSelected = item.id in selectedIds
                         ScanHistoryCard(
                             scanItem = item,
+                            isSelectionMode = isSelectionMode,
+                            isSelected = isSelected,
+                            onToggleSelect = {
+                                selectedIds = if (isSelected) selectedIds - item.id else selectedIds + item.id
+                            },
                             onDelete = { onDeleteTicket(item.id) }
                         )
                     }
@@ -282,8 +404,13 @@ fun FilterChipItem(
 @Composable
 fun ScanHistoryCard(
     scanItem: ScanItem,
-    onDelete: () -> Unit
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelect: () -> Unit = {},
+    onDelete: () -> Unit = {}
 ) {
+    var isExpanded by remember { mutableStateOf(false) }
+
     val (statusColor, statusIcon, statusLabel) = when (scanItem.status) {
         ScanStatus.VALID -> Triple(ValidGreen, Icons.Default.QrCode, "Valid")
         ScanStatus.EXPIRED -> Triple(ExpiredOrange, Icons.Default.Timer, "Expired")
@@ -294,108 +421,213 @@ fun ScanHistoryCard(
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                if (isSelectionMode) onToggleSelect()
+                else isExpanded = !isExpanded
+            },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) BluePrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(14.dp)
         ) {
-            // Circle Status Avatar
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(statusColor),
-                contentAlignment = Alignment.Center
+            // SUMMARY ROW (COLLAPSED VIEW)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = statusIcon,
-                    contentDescription = statusLabel,
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = scanItem.attendeeName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Text(
-                    text = scanItem.ticketCode,
-                    fontSize = 13.sp,
-                    color = TextMuted
-                )
-
-                if (scanItem.event.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = scanItem.event,
-                        fontSize = 12.sp,
-                        color = BluePrimary
+                if (isSelectionMode) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelect() },
+                        colors = CheckboxDefaults.colors(checkedColor = BluePrimary)
                     )
+                    Spacer(Modifier.width(6.dp))
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(statusColor)
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    Text(
-                        text = "$statusLabel • ${if (scanItem.isSynced) "Synced" else "Pending"}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = statusColor
-                    )
-                }
-            }
-
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
-                Text(
-                    text = scanItem.time,
-                    fontSize = 12.sp,
-                    color = TextMuted
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(32.dp)
+                // Circle Status Avatar
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(statusColor),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete record",
-                        tint = TextMuted,
-                        modifier = Modifier.size(18.dp)
+                        imageVector = statusIcon,
+                        contentDescription = statusLabel,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = scanItem.attendeeName,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = scanItem.ticketCode,
+                        fontSize = 12.sp,
+                        color = TextMuted
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(statusColor)
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        Text(
+                            text = "$statusLabel • ${if (scanItem.isSynced) "Synced" else "Pending"}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = statusColor
+                        )
+                    }
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = scanItem.time,
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (isExpanded) "Hide" else "Details",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = BluePrimary
+                        )
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Expand details",
+                            tint = BluePrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            // EXPANDED DETAILS SECTION (APPEARS ONLY WHEN EXPANDED)
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "TICKET DETAILS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BluePrimary,
+                        letterSpacing = 0.8.sp
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    DetailItemRow("Event Name", scanItem.event.ifBlank { "Malawi Live Concert 2025" })
+                    DetailItemRow("Ticket Code", scanItem.ticketCode)
+                    DetailItemRow("Attendee Name", scanItem.attendeeName)
+                    DetailItemRow("Validation Outcome", "$statusLabel (${scanItem.status.name})")
+                    DetailItemRow("Scan Timestamp", scanItem.time)
+                    DetailItemRow("Cloud Sync Status", if (scanItem.isSynced) "Synced to Cloud Server" else "Pending Synchronisation")
+
+                    Spacer(Modifier.height(10.dp))
+
+                    // DELETE RECORD BUTTON (LOCATED INSIDE EXPANDED SECTION)
+                    OutlinedButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RejectedRed),
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(RejectedRed)
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete record",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Delete History Record",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DetailItemRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = TextMuted
+        )
+        Text(
+            text = value,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.End
+        )
     }
 }
