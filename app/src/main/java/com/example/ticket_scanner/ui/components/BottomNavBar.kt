@@ -56,7 +56,7 @@ fun BottomNavBar(
         modifier = modifier
             .fillMaxWidth()
             .background(backgroundColor)
-            .padding(vertical = 10.dp, horizontal = 12.dp),
+            .padding(vertical = 6.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -68,10 +68,10 @@ fun BottomNavBar(
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(itemBg)
                     .clickable { onTabSelected(tab) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -82,13 +82,13 @@ fun BottomNavBar(
                         imageVector = tab.icon,
                         contentDescription = tab.title,
                         tint = itemColor,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = tab.title,
                         color = itemColor,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(top = 2.dp)
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(top = 1.dp)
                     )
                 }
             }
