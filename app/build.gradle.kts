@@ -26,6 +26,9 @@ android {
     buildFeatures {
         compose = true
     }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
 }
 
 dependencies {
@@ -65,6 +68,7 @@ dependencies {
 
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
+    implementation(libs.core.ktx)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
