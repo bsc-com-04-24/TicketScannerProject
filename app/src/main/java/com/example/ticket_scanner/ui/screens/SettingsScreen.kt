@@ -39,9 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
@@ -59,9 +61,12 @@ fun SettingsScreen(
     onToggleOffline: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var autoSyncEnabled by remember { mutableStateOf(true) }
     var soundVibrationEnabled by remember { mutableStateOf(true) }
-    var pushNotificationsEnabled by remember { mutableStateOf(true) }
+    var pushNotificationsEnabled by remember {
+        mutableStateOf(HistoryStorageManager.loadNotificationsEnabled(context))
+    }
 
     Box(
         modifier = modifier
@@ -124,7 +129,10 @@ fun SettingsScreen(
                     subtitle = "Receive alert updates during live event scanning",
                     icon = Icons.Default.Notifications,
                     isChecked = pushNotificationsEnabled,
-                    onCheckedChange = { pushNotificationsEnabled = it }
+                    onCheckedChange = { enabled ->
+                        pushNotificationsEnabled = enabled
+                        HistoryStorageManager.saveNotificationsEnabled(context, enabled)
+                    }
                 )
 
                 SettingItemRow(

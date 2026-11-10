@@ -8,6 +8,7 @@ object HistoryStorageManager {
     private const val PREFS_NAME = "ticket_scanner_prefs"
     private const val KEY_SCAN_HISTORY = "scan_history_json"
     private const val KEY_DARK_MODE = "dark_mode_enabled"
+    private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
 
     fun saveHistory(context: Context, items: List<ScanItem>) {
         val jsonArray = JSONArray()
@@ -66,5 +67,15 @@ object HistoryStorageManager {
     fun loadDarkMode(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(KEY_DARK_MODE, false)
+    }
+
+    fun saveNotificationsEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled).apply()
+    }
+
+    fun loadNotificationsEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
     }
 }
