@@ -345,7 +345,8 @@ fun TicketScannerMainApp(
 
                                     lastValidation = validation
                                     isVerifying = false
-                                    showTicketResult = true
+                                    // Keep showTicketResult = false so camera scanner stays active and open
+                                    showTicketResult = false
 
                                     scanStats = scanStats.copy(
                                         scannedCount = scanStats.scannedCount + 1,
