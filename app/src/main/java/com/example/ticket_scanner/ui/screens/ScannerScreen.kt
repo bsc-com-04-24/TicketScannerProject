@@ -26,7 +26,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -85,7 +84,6 @@ import com.example.ticket_scanner.ui.theme.TextLight
 import com.example.ticket_scanner.ui.theme.TextLightMuted
 import com.example.ticket_scanner.ui.theme.TextMuted
 import com.example.ticket_scanner.ui.theme.ValidGreen
-import com.example.ticket_scanner.validation.data.SampleScans
 import com.example.ticket_scanner.validation.model.ValidationResult
 import com.example.ticket_scanner.validation.model.ValidationStatus
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -730,72 +728,6 @@ fun ScannerScreen(
 
             Spacer(Modifier.height(14.dp))
 
-            // DEMO SAMPLES CHIPS
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text(
-                    "Quick Demo Test Samples",
-                    color = textMutedColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(4.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SampleScans.all.forEach { sample ->
-                        val label = sample.expectedOutcome.substringBefore(" ")
-                        val chipColor = when {
-                            label.contains("Valid", ignoreCase = true) -> ValidGreen
-                            label.contains("Invalid", ignoreCase = true) -> RejectedRed
-                            label.contains("Expired", ignoreCase = true) -> ExpiredOrange
-                            else -> Color(0xFF9333EA)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(chipColor.copy(alpha = 0.15f))
-                                .border(
-                                    1.dp,
-                                    chipColor.copy(alpha = 0.4f),
-                                    RoundedCornerShape(10.dp)
-                                )
-                                .clickable {
-                                    currentVerifyCallback(sample.ticket.ticketCode)
-                                }
-                                .padding(
-                                    horizontal = 12.dp,
-                                    vertical = 8.dp
-                                )
-                        ) {
-                            Column {
-                                Text(
-                                    sample.ticket.ticketCode,
-                                    color = textColor,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    sample.expectedOutcome,
-                                    color = chipColor,
-                                    fontSize = 10.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
         }
 
         // BOTTOM NAVIGATION BAR

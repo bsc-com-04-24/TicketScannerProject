@@ -386,6 +386,7 @@ fun AlertsScreen(
     }
 }
 
+
 @Composable
 fun NotificationCard(
     notification: NotificationItem,
@@ -411,7 +412,8 @@ fun NotificationCard(
                 else isExpanded = !isExpanded
             },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) BluePrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
+            containerColor = if (isSelected) BluePrimary.copy(alpha = 0.12f)
+            else MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -421,7 +423,6 @@ fun NotificationCard(
                 .fillMaxWidth()
                 .padding(14.dp)
         ) {
-            // SUMMARY ROW (COLLAPSED VIEW)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -435,7 +436,6 @@ fun NotificationCard(
                     Spacer(Modifier.width(6.dp))
                 }
 
-                // Circle Icon Avatar
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -451,11 +451,9 @@ fun NotificationCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(Modifier.width(12.dp))
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = notification.title,
                         fontSize = 15.sp,
@@ -463,7 +461,7 @@ fun NotificationCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(Modifier.height(2.dp))
 
                     Text(
                         text = notification.description,
@@ -483,32 +481,54 @@ fun NotificationCard(
                         color = TextMuted
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(Modifier.height(4.dp))
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Text(
-                            text = if (isExpanded) "Hide" else "More",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = BluePrimary
-                        )
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Expand alert info",
-                            tint = BluePrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable {
+                                    isExpanded = !isExpanded
+                                }
+                                .padding(horizontal = 6.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isExpanded) "Hide" else "More",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = BluePrimary
+                            )
+
+                            Icon(
+                                imageVector = if (isExpanded)
+                                    Icons.Default.KeyboardArrowUp
+                                else Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Expand or collapse alert info",
+                                tint = BluePrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete notification",
+                                tint = RejectedRed,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
                 }
             }
 
-            // EXPANDED DETAILS SECTION
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = fadeIn() + expandVertically(),
@@ -548,7 +568,12 @@ fun NotificationCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Category", fontSize = 11.sp, color = TextMuted)
-                        Text(notification.type.name, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BluePrimary)
+                        Text(
+                            notification.type.name,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BluePrimary
+                        )
                     }
 
                     Row(
@@ -556,33 +581,11 @@ fun NotificationCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Timestamp", fontSize = 11.sp, color = TextMuted)
-                        Text(notification.timestamp, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    // DELETE SINGLE ALERT BUTTON
-                    OutlinedButton(
-                        onClick = onDelete,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(38.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RejectedRed),
-                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(RejectedRed)
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete notification",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Delete Alert Notification",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            notification.timestamp,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -590,3 +593,4 @@ fun NotificationCard(
         }
     }
 }
+

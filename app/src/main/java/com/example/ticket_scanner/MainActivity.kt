@@ -179,6 +179,16 @@ fun TicketScannerMainApp(
             )
         }
 
+        // VALIDATION RESULT (Online & Offline)
+        else if (showTicketResult && lastValidation != null) {
+            ValidationResultScreen(
+                result = lastValidation!!,
+                onScanNext = {
+                    showTicketResult = false
+                }
+            )
+        }
+
         // OFFLINE SCANNER
         else if (isOfflineMode) {
             OfflineScannerScreen(
@@ -257,22 +267,11 @@ fun TicketScannerMainApp(
 
                     lastValidation = validation
                     val isFastModeActive = HistoryStorageManager.loadFastMode(context)
-                    if (!isFastModeActive) {
                         showTicketResult = true
-                    }
                 }
             )
         }
 
-        // VALIDATION RESULT (Online & Offline)
-        else if (showTicketResult && lastValidation != null) {
-            ValidationResultScreen(
-                result = lastValidation!!,
-                onScanNext = {
-                    showTicketResult = false
-                }
-            )
-        }
 
         // MAIN APPLICATION SCREENS (Swipeable Pager & Bottom Bar)
         else {
