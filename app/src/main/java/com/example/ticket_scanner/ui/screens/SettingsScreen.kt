@@ -24,6 +24,9 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WifiOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -31,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +68,7 @@ fun SettingsScreen(
     var autoSyncEnabled by remember { mutableStateOf(true) }
     var soundVibrationEnabled by remember { mutableStateOf(true) }
     var pushNotificationsEnabled by remember { mutableStateOf(true) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -150,11 +155,11 @@ fun SettingsScreen(
                 )
 
                 SettingItemRow(
-                    title = "Sign Out",
+                    title = "Logout",
                     subtitle = "End operator session and return to login",
                     icon = Icons.AutoMirrored.Filled.ExitToApp,
                     tintColor = RejectedRed,
-                    onClick = onLogout
+                    onClick = { showLogoutDialog = true }
                 )
             }
         }
@@ -165,6 +170,34 @@ fun SettingsScreen(
             onTabSelected = onTabSelected,
             isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Confirm Logout") },
+            text = { Text("Are you sure you want to log out?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RejectedRed
+                    )
+                ) {
+                    Text("Logout", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showLogoutDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
