@@ -9,6 +9,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.Route
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -17,9 +18,22 @@ object RetrofitClient {
     val baseUrl: String = BuildConfig.BACKEND_BASE_URL
 
     private val gson = Gson()
-    private val refreshClient = OkHttpClient.Builder().build()
+    private val refreshClient = OkHttpClient.Builder()
+        .addInterceptor(
+            HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
+        )
+        .build()
+
     private val authenticator = AuthTokenAuthenticator(baseUrl, gson, refreshClient)
+
     private val httpClient = OkHttpClient.Builder()
+        .addInterceptor(
+            HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
+        )
         .addInterceptor { chain ->
             val request = chain.request()
             val path = request.url.encodedPath
@@ -102,7 +116,7 @@ object RetrofitClient {
                         return null
                     }
 
-                    AuthTokenStore.save(tokens)
+                    AuthTokenStore.save(tokens, AuthTokenStore.isBiometricEnabled())
                     return response.request.newBuilder()
                         .header("Authorization", "Bearer ${tokens.token}")
                         .build()

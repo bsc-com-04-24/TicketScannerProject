@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.ticket_scanner.network.AuthRepository
 import com.example.ticket_scanner.network.AuthResponse
 import com.example.ticket_scanner.network.AuthTokenStore
+import com.google.gson.JsonParser
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -65,13 +66,14 @@ class AuthViewModel(
                         successMessage = "Login successful!"
                     )
                 } else {
+                    val errorMsg = parseErrorMessage(response)
                     uiState = AuthUiState(
-                        errorMessage = "Login failed: ${response.code()} ${response.message()}"
+                        errorMessage = errorMsg
                     )
                 }
             } catch (e: IOException) {
                 uiState = AuthUiState(
-                    errorMessage = "Cannot connect to the server. Check internet connection."
+                    errorMessage = "Cannot connect to the server. Check network connection and server status."
                 )
             } catch (e: Exception) {
                 uiState = AuthUiState(
@@ -146,19 +148,38 @@ class AuthViewModel(
                         successMessage = "Registration successful!"
                     )
                 } else {
+                    val errorMsg = parseErrorMessage(response)
                     uiState = AuthUiState(
-                        errorMessage = "Registration failed: ${response.code()} ${response.message()}"
+                        errorMessage = errorMsg
                     )
                 }
             } catch (e: IOException) {
                 uiState = AuthUiState(
-                    errorMessage = "Cannot connect to the server. Check internet connection."
+                    errorMessage = "Cannot connect to the server. Check network connection and server status."
                 )
             } catch (e: Exception) {
                 uiState = AuthUiState(
                     errorMessage = "Registration error: ${e.message}"
                 )
             }
+        }
+    }
+
+    private fun parseErrorMessage(response: retrofit2.Response<*>): String {
+        return try {
+            val errorBody = response.errorBody()?.string()
+            if (!errorBody.isNullOrBlank()) {
+                val json = JsonParser.parseString(errorBody)
+                if (json.isJsonObject) {
+                    val message = json.asJsonObject.get("message")?.takeIf { it.isJsonPrimitive }?.asString
+                    if (!message.isNullOrBlank()) {
+                        return message
+                    }
+                }
+            }
+            "Request failed: HTTP ${response.code()} ${response.message()}"
+        } catch (_: Exception) {
+            "Request failed: HTTP ${response.code()} ${response.message()}"
         }
     }
 }
