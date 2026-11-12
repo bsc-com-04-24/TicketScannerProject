@@ -79,6 +79,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
 
+    // AndroidX Biometric for fingerprint authentication
+    implementation("androidx.biometric:biometric:1.1.0")
+
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
     implementation(libs.core.ktx)

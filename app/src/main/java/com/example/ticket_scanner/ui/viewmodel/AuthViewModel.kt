@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ticket_scanner.network.AuthRepository
 import com.example.ticket_scanner.network.AuthResponse
+import com.example.ticket_scanner.network.AuthTokenStore
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -31,6 +32,7 @@ class AuthViewModel(
     }
 
     fun logout(sessionExpired: Boolean = false) {
+        AuthTokenStore.clear()
         uiState = AuthUiState()
     }
 
@@ -54,8 +56,12 @@ class AuthViewModel(
                 val response = authRepository.login(trimmedEmail, password)
 
                 if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        AuthTokenStore.save(body, AuthTokenStore.isBiometricEnabled())
+                    }
                     uiState = AuthUiState(
-                        authResponse = response.body(),
+                        authResponse = body,
                         successMessage = "Login successful!"
                     )
                 } else {
@@ -79,7 +85,8 @@ class AuthViewModel(
         fullName: String,
         email: String,
         password: String,
-        confirmPassword: String
+        confirmPassword: String,
+        enableBiometric: Boolean
     ) {
         val trimmedName = fullName.trim()
         val trimmedEmail = email.trim()
@@ -130,8 +137,12 @@ class AuthViewModel(
                 )
 
                 if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        AuthTokenStore.save(body, enableBiometric)
+                    }
                     uiState = AuthUiState(
-                        authResponse = response.body(),
+                        authResponse = body,
                         successMessage = "Registration successful!"
                     )
                 } else {

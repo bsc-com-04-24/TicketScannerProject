@@ -14,12 +14,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
@@ -33,8 +35,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -69,8 +74,11 @@ fun AuthScreen(
     errorMessage: String? = null,
     successMessage: String? = null,
     registrationEnabled: Boolean = true,
+    isBiometricAvailable: Boolean = false,
+    isBiometricStored: Boolean = false,
     onLoginClick: (email: String, password: String) -> Unit = { _, _ -> },
-    onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String) -> Unit = { _, _, _, _ -> },
+    onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String, enableBiometric: Boolean) -> Unit = { _, _, _, _, _ -> },
+    onBiometricLoginClick: () -> Unit = {},
     onModeChange: () -> Unit = {}
 ) {
     var authMode by remember { mutableStateOf(AuthMode.SIGN_IN) }
@@ -84,6 +92,7 @@ fun AuthScreen(
     var regEmail by remember { mutableStateOf("") }
     var regPassword by remember { mutableStateOf("") }
     var regConfirmPassword by remember { mutableStateOf("") }
+    var enableBiometricEnrollment by remember { mutableStateOf(true) }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
@@ -248,7 +257,7 @@ fun AuthScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
                             // Sign In Submit Button
                             Button(
@@ -274,6 +283,34 @@ fun AuthScreen(
                                         color = Color.White,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            // Biometric Sign In Button (if available & configured)
+                            if (isBiometricAvailable && isBiometricStored) {
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedButton(
+                                    onClick = onBiometricLoginClick,
+                                    enabled = !isLoading,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(50.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fingerprint,
+                                        contentDescription = "Biometric",
+                                        tint = BluePrimary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Sign in with fingerprint",
+                                        color = textColor,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 }
                             }
@@ -436,7 +473,58 @@ fun AuthScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            // Biometric Enrollment Section (if device supports biometrics)
+                            if (isBiometricAvailable) {
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Fingerprint,
+                                            contentDescription = "Fingerprint",
+                                            tint = BluePrimary,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column(
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                text = "Enable biometric login",
+                                                color = textColor,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Use your fingerprint to sign in securely next time.",
+                                                color = textColor.copy(alpha = 0.7f),
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                        Switch(
+                                            checked = enableBiometricEnrollment,
+                                            onCheckedChange = { enableBiometricEnrollment = it },
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = Color.White,
+                                                checkedTrackColor = BluePrimary
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
 
                             // Register Submit Button
                             Button(
@@ -445,7 +533,8 @@ fun AuthScreen(
                                         regFullName,
                                         regEmail,
                                         regPassword,
-                                        regConfirmPassword
+                                        regConfirmPassword,
+                                        enableBiometricEnrollment && isBiometricAvailable
                                     )
                                 },
                                 enabled = !isLoading,
@@ -473,7 +562,7 @@ fun AuthScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(20.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
 
                             // Switch to Sign In Mode Link
                             Row(

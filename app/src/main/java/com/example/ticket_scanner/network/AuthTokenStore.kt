@@ -8,6 +8,7 @@ object AuthTokenStore {
     private const val PREFERENCES_NAME = "scanner_auth"
     private const val ACCESS_TOKEN_KEY = "access_token"
     private const val REFRESH_TOKEN_KEY = "refresh_token"
+    private const val BIOMETRIC_ENABLED_KEY = "biometric_enabled"
 
     @Volatile
     private var preferences: SharedPreferences? = null
@@ -28,13 +29,20 @@ object AuthTokenStore {
     fun hasTokens(): Boolean =
         !accessToken().isNullOrBlank()
 
-    fun save(response: AuthResponse) {
+    fun isBiometricEnabled(): Boolean = preferences?.getBoolean(BIOMETRIC_ENABLED_KEY, false) == true
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        preferences?.edit()?.putBoolean(BIOMETRIC_ENABLED_KEY, enabled)?.apply()
+    }
+
+    fun save(response: AuthResponse, enableBiometric: Boolean = false) {
         require(!response.token.isNullOrBlank()) { "The server returned no access token." }
 
         checkNotNull(preferences) { "AuthTokenStore has not been initialized." }
             .edit()
             .putString(ACCESS_TOKEN_KEY, response.token)
-            .putString(REFRESH_TOKEN_KEY, response.token) // Fallback to access token if refresh token not returned
+            .putString(REFRESH_TOKEN_KEY, response.token)
+            .putBoolean(BIOMETRIC_ENABLED_KEY, enableBiometric)
             .apply()
     }
 
@@ -42,6 +50,7 @@ object AuthTokenStore {
         preferences?.edit()
             ?.remove(ACCESS_TOKEN_KEY)
             ?.remove(REFRESH_TOKEN_KEY)
+            ?.remove(BIOMETRIC_ENABLED_KEY)
             ?.apply()
     }
 }

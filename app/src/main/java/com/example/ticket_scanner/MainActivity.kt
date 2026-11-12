@@ -1,7 +1,6 @@
 package com.example.ticket_scanner
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -19,9 +18,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ticket_scanner.network.AuthTokenStore
-import com.example.ticket_scanner.network.TicketValidationRepository
 import com.example.ticket_scanner.eventcreation.ui.EventCreationFlow
 import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
 import com.example.ticket_scanner.events.EventsScreen
@@ -29,11 +27,14 @@ import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
+import com.example.ticket_scanner.network.AuthTokenStore
+import com.example.ticket_scanner.network.TicketValidationRepository
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.screens.*
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
 import com.example.ticket_scanner.ui.viewmodel.AuthViewModel
+import com.example.ticket_scanner.util.BiometricHelper
 import com.example.ticket_scanner.util.ScanFeedback
 import com.example.ticket_scanner.validation.domain.TicketValidator
 import com.example.ticket_scanner.validation.model.ScannedTicket
@@ -43,7 +44,7 @@ import com.example.ticket_scanner.validation.ui.ValidationResultScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     private val eventCreationViewModel: EventCreationViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +78,7 @@ fun TicketScannerMainApp(
     onToggleDarkMode: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? FragmentActivity
 
     var showSplash by remember { mutableStateOf(true) }
     var isLoggedIn by remember { mutableStateOf(AuthTokenStore.hasTokens()) }
@@ -87,7 +89,7 @@ fun TicketScannerMainApp(
 
     LaunchedEffect(authUiState.authResponse) {
         authUiState.authResponse?.let { response ->
-            AuthTokenStore.save(response)
+            AuthTokenStore.save(response, AuthTokenStore.isBiometricEnabled())
             loginError = null
             isLoggedIn = true
         }
@@ -159,13 +161,30 @@ fun TicketScannerMainApp(
                 successMessage = authUiState.successMessage,
                 isLoading = authUiState.isLoading,
                 registrationEnabled = true,
+                isBiometricAvailable = BiometricHelper.canAuthenticate(context),
+                isBiometricStored = AuthTokenStore.isBiometricEnabled(),
 
                 onLoginClick = { email, password ->
                     authViewModel.login(email, password)
                 },
 
-                onRegisterClick = { fullName, email, password, confirmPassword ->
-                    authViewModel.register(fullName, email, password, confirmPassword)
+                onBiometricLoginClick = {
+                    if (activity != null) {
+                        BiometricHelper.authenticate(
+                            activity = activity,
+                            onSuccess = {
+                                loginError = null
+                                isLoggedIn = true
+                            },
+                            onError = { err ->
+                                loginError = err
+                            }
+                        )
+                    }
+                },
+
+                onRegisterClick = { fullName, email, password, confirmPassword, enableBiometric ->
+                    authViewModel.register(fullName, email, password, confirmPassword, enableBiometric)
                 },
 
                 onModeChange = {
