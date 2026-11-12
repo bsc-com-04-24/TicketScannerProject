@@ -67,7 +67,7 @@ fun AuthScreen(
     isLoading: Boolean = false,
     errorMessage: String? = null,
     successMessage: String? = null,
-    registrationEnabled: Boolean = false,
+    registrationEnabled: Boolean = true,
     onLoginClick: (email: String, password: String) -> Unit = { _, _ -> },
     onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String) -> Unit = { _, _, _, _ -> },
     onModeChange: () -> Unit = {}
@@ -145,9 +145,9 @@ fun AuthScreen(
 
                 Text(
                     text = if (authMode == AuthMode.SIGN_IN) {
-                        "Sign in with your provisioned validator account"
+                        "Sign in to access scanner"
                     } else {
-                        "Validator accounts are issued by an administrator"
+                        "Create a validator account"
                     },
                     color = textColor.copy(alpha = 0.7f),
                     fontSize = 14.sp,
@@ -300,13 +300,6 @@ fun AuthScreen(
                                         }
                                     )
                                 }
-                            } else {
-                                Text(
-                                    text = "Contact your administrator if you need scanner access.",
-                                    color = textColor.copy(alpha = 0.7f),
-                                    fontSize = 13.sp,
-                                    textAlign = TextAlign.Center
-                                )
                             }
                         }
                     } else {
