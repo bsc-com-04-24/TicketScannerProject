@@ -86,7 +86,8 @@ fun TicketScannerMainApp(
     val authUiState = authViewModel.uiState
 
     LaunchedEffect(authUiState.authResponse) {
-        if (authUiState.authResponse != null) {
+        authUiState.authResponse?.let { response ->
+            AuthTokenStore.save(response)
             loginError = null
             isLoggedIn = true
         }

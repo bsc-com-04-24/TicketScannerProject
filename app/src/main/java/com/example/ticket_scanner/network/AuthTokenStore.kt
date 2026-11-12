@@ -13,10 +13,12 @@ object AuthTokenStore {
     private var preferences: SharedPreferences? = null
 
     fun initialize(context: Context) {
-        preferences = context.applicationContext.getSharedPreferences(
-            PREFERENCES_NAME,
-            Context.MODE_PRIVATE
-        )
+        if (preferences == null) {
+            preferences = context.applicationContext.getSharedPreferences(
+                PREFERENCES_NAME,
+                Context.MODE_PRIVATE
+            )
+        }
     }
 
     fun accessToken(): String? = preferences?.getString(ACCESS_TOKEN_KEY, null)
@@ -24,16 +26,15 @@ object AuthTokenStore {
     fun refreshToken(): String? = preferences?.getString(REFRESH_TOKEN_KEY, null)
 
     fun hasTokens(): Boolean =
-        !accessToken().isNullOrBlank() && !refreshToken().isNullOrBlank()
+        !accessToken().isNullOrBlank()
 
     fun save(response: AuthResponse) {
         require(!response.token.isNullOrBlank()) { "The server returned no access token." }
-        require(!response.refreshToken.isNullOrBlank()) { "The server returned no refresh token." }
 
         checkNotNull(preferences) { "AuthTokenStore has not been initialized." }
             .edit()
             .putString(ACCESS_TOKEN_KEY, response.token)
-            .putString(REFRESH_TOKEN_KEY, response.refreshToken)
+            .putString(REFRESH_TOKEN_KEY, response.token) // Fallback to access token if refresh token not returned
             .apply()
     }
 
