@@ -7,12 +7,15 @@ data class LoginRequest(
 
 data class AuthResponse(
     val token: String,
-    val email: String,
-    val role: String
+    val refreshToken: String
 )
 
 data class RegisterRequest(
     val email: String,
     val password: String,
-    val role: String = "VALIDATOR"
+    val role: String = "CUSTOMER"
+)
+
+data class RefreshTokenRequest(
+    val refreshToken: String
 )

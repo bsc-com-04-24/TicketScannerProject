@@ -52,5 +52,7 @@ fun ValidationResultScreen(
         ValidationStatus.INVALID -> InvalidResultScreen(result, onScanNext, modifier)
         ValidationStatus.EXPIRED -> ExpiredResultScreen(result, onScanNext, modifier)
         ValidationStatus.ALREADY_USED -> AlreadyUsedResultScreen(result, onScanNext, modifier)
+        ValidationStatus.UNAVAILABLE,
+        ValidationStatus.SESSION_EXPIRED -> UnavailableResultScreen(result, onScanNext, modifier)
     }
 }

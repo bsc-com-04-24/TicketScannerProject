@@ -67,6 +67,7 @@ fun AuthScreen(
     isLoading: Boolean = false,
     errorMessage: String? = null,
     successMessage: String? = null,
+    registrationEnabled: Boolean = false,
     onLoginClick: (email: String, password: String) -> Unit = { _, _ -> },
     onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String) -> Unit = { _, _, _, _ -> },
     onModeChange: () -> Unit = {}
@@ -143,7 +144,11 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = if (authMode == AuthMode.SIGN_IN) "Sign in to access scanner" else "Create a validator account",
+                    text = if (authMode == AuthMode.SIGN_IN) {
+                        "Sign in with your provisioned validator account"
+                    } else {
+                        "Validator accounts are issued by an administrator"
+                    },
                     color = textColor.copy(alpha = 0.7f),
                     fontSize = 14.sp,
                     textAlign = TextAlign.Center
@@ -274,24 +279,33 @@ fun AuthScreen(
                             Spacer(modifier = Modifier.height(20.dp))
 
                             // Switch to Register Mode Link
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            if (registrationEnabled) {
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Don't have an account? ",
+                                        color = textColor.copy(alpha = 0.7f),
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "Register",
+                                        color = BluePrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.clickable {
+                                            authMode = AuthMode.REGISTER
+                                            onModeChange()
+                                        }
+                                    )
+                                }
+                            } else {
                                 Text(
-                                    text = "Don't have an account? ",
+                                    text = "Contact your administrator if you need scanner access.",
                                     color = textColor.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = "Register",
-                                    color = BluePrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.clickable {
-                                        authMode = AuthMode.REGISTER
-                                        onModeChange()
-                                    }
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }

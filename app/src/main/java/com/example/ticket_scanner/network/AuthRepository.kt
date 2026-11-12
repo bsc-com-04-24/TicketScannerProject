@@ -15,7 +15,7 @@ class AuthRepository {
     suspend fun register(
         email: String,
         password: String,
-        role: String = "VALIDATOR"
+        role: String = "CUSTOMER"
     ): retrofit2.Response<AuthResponse> {
 
         val request = RegisterRequest(

@@ -30,6 +30,10 @@ class AuthViewModel(
         uiState = uiState.copy(errorMessage = null, successMessage = null)
     }
 
+    fun logout(sessionExpired: Boolean = false) {
+        uiState = AuthUiState()
+    }
+
     fun login(email: String, password: String) {
         val trimmedEmail = email.trim()
 
@@ -40,19 +44,6 @@ class AuthViewModel(
 
         if (password.isEmpty()) {
             uiState = AuthUiState(errorMessage = "Please enter your password.")
-            return
-        }
-
-        // Test credentials bypass / shortcut for user@gmail.com / user
-        if (trimmedEmail.equals("user@gmail.com", ignoreCase = true) && password == "user") {
-            uiState = AuthUiState(
-                authResponse = AuthResponse(
-                    token = "mock-jwt-token-user",
-                    email = "user@gmail.com",
-                    role = "VALIDATOR"
-                ),
-                successMessage = "Login successful!"
-            )
             return
         }
 
@@ -116,7 +107,7 @@ class AuthViewModel(
             return
         }
 
-        if (password.length < 6 && !(trimmedEmail.equals("user@gmail.com", ignoreCase = true) && password == "user")) {
+        if (password.length < 6) {
             uiState = AuthUiState(errorMessage = "Password must be at least 6 characters long.")
             return
         }
@@ -124,19 +115,6 @@ class AuthViewModel(
         // 4. Password Matching Validation
         if (password != confirmPassword) {
             uiState = AuthUiState(errorMessage = "Passwords do not match.")
-            return
-        }
-
-        // Test credentials shortcut for registration as well if desired
-        if (trimmedEmail.equals("user@gmail.com", ignoreCase = true) && password == "user") {
-            uiState = AuthUiState(
-                authResponse = AuthResponse(
-                    token = "mock-jwt-token-user",
-                    email = "user@gmail.com",
-                    role = "VALIDATOR"
-                ),
-                successMessage = "Registration successful!"
-            )
             return
         }
 

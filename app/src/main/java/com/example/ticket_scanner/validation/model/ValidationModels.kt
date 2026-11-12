@@ -1,7 +1,14 @@
 package com.example.ticket_scanner.validation.model
 
 /** The four outcomes of validating a ticket. */
-enum class ValidationStatus { VALID, INVALID, EXPIRED, ALREADY_USED }
+enum class ValidationStatus {
+    VALID,
+    INVALID,
+    EXPIRED,
+    ALREADY_USED,
+    UNAVAILABLE,
+    SESSION_EXPIRED
+}
 
 /**
  * INPUT to validation: what the scanning/decoding feature hands over.

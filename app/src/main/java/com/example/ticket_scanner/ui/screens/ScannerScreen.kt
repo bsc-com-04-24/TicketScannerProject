@@ -266,6 +266,8 @@ fun ScannerScreen(
                         ValidationStatus.INVALID -> RejectedRed
                         ValidationStatus.EXPIRED -> ExpiredOrange
                         ValidationStatus.ALREADY_USED -> Color(0xFF8B5CF6)
+                        ValidationStatus.UNAVAILABLE,
+                        ValidationStatus.SESSION_EXPIRED -> ExpiredOrange
                     }
 
                     Row(
@@ -294,7 +296,8 @@ fun ScannerScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "${result.holderName ?: "Attendee"} • ${result.ticketCode}",
+                                    text = result.reason
+                                        ?: "${result.holderName ?: "Attendee"} • ${result.ticketCode}",
                                     color = Color.White.copy(alpha = 0.9f),
                                     fontSize = 11.sp
                                 )

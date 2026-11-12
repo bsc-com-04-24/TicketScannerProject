@@ -20,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ticket_scanner.network.AuthTokenStore
+import com.example.ticket_scanner.network.TicketValidationRepository
 import com.example.ticket_scanner.eventcreation.ui.EventCreationFlow
 import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
 import com.example.ticket_scanner.events.EventsScreen
@@ -46,6 +48,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AuthTokenStore.initialize(applicationContext)
 
         setContent {
             val context = LocalContext.current
@@ -76,7 +79,7 @@ fun TicketScannerMainApp(
     val context = LocalContext.current
 
     var showSplash by remember { mutableStateOf(true) }
-    var isLoggedIn by remember { mutableStateOf(false) }
+    var isLoggedIn by remember { mutableStateOf(AuthTokenStore.hasTokens()) }
     var loginError by remember { mutableStateOf<String?>(null) }
 
     val authViewModel: AuthViewModel = viewModel()
@@ -154,6 +157,7 @@ fun TicketScannerMainApp(
                 errorMessage = authUiState.errorMessage,
                 successMessage = authUiState.successMessage,
                 isLoading = authUiState.isLoading,
+                registrationEnabled = false,
 
                 onLoginClick = { email, password ->
                     authViewModel.login(email, password)
@@ -311,7 +315,7 @@ fun TicketScannerMainApp(
                                             ?: decoded.fields["ticketCode"]
                                             ?: decoded.rawMessage
 
-                                    val validation = TicketValidator.validate(
+                                    val validation = TicketValidationRepository.validate(
                                         ScannedTicket(
                                             ticketCode = actualTicketCode,
                                             ticketType = decoded.fields["ticketType"] ?: "",
@@ -321,6 +325,14 @@ fun TicketScannerMainApp(
                                                 ?: decoded.fields["eventName"] ?: ""
                                         )
                                     )
+
+                                    if (validation.status == ValidationStatus.SESSION_EXPIRED) {
+                                        authViewModel.logout(sessionExpired = true)
+                                        isLoggedIn = false
+                                        isVerifying = false
+                                        lastValidation = null
+                                        return@launch
+                                    }
 
                                     if (validation.status == ValidationStatus.VALID) {
                                         ScanFeedback.playSuccess(context)
@@ -353,8 +365,10 @@ fun TicketScannerMainApp(
                                         validCount = scanStats.validCount +
                                                 if (status == ScanStatus.VALID) 1 else 0,
                                         rejectedCount = scanStats.rejectedCount +
-                                                if (status != ScanStatus.VALID) 1 else 0,
-                                        isOnline = true
+                                                if (status != ScanStatus.VALID &&
+                                                    status != ScanStatus.PENDING
+                                                ) 1 else 0,
+                                        isOnline = validation.status != ValidationStatus.UNAVAILABLE
                                     )
                                 }
                             }
@@ -453,6 +467,7 @@ fun TicketScannerMainApp(
                                 showDownloadedTickets = true
                             },
                             onLogout = {
+                                authViewModel.logout()
                                 isLoggedIn = false
                                 loginError = null
                             }
@@ -475,4 +490,6 @@ private fun ValidationStatus.toScanStatus(): ScanStatus =
         ValidationStatus.INVALID -> ScanStatus.REJECTED
         ValidationStatus.EXPIRED -> ScanStatus.EXPIRED
         ValidationStatus.ALREADY_USED -> ScanStatus.ALREADY_USED
+        ValidationStatus.UNAVAILABLE,
+        ValidationStatus.SESSION_EXPIRED -> ScanStatus.PENDING
     }

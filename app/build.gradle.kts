@@ -4,6 +4,17 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val configuredBackendBaseUrl = providers.gradleProperty("BACKEND_BASE_URL")
+    .orElse(providers.environmentVariable("BACKEND_BASE_URL"))
+    .getOrElse("http://192.168.137.216:1234/")
+    .trim()
+val backendBaseUrl = configuredBackendBaseUrl.let { value ->
+    require(value.startsWith("http://") || value.startsWith("https://")) {
+        "BACKEND_BASE_URL must use http:// or https://"
+    }
+    if (value.endsWith("/")) value else "$value/"
+}
+
 android {
     namespace = "com.example.ticket_scanner"
     compileSdk = 36
@@ -16,6 +27,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "BACKEND_BASE_URL", "\"$backendBaseUrl\"")
     }
 
     compileOptions {
@@ -25,6 +37,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     kotlinOptions {
         jvmTarget = "17"
