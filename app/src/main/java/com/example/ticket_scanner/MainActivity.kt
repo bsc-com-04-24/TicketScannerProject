@@ -158,7 +158,7 @@ fun TicketScannerMainApp(
                 errorMessage = authUiState.errorMessage,
                 successMessage = authUiState.successMessage,
                 isLoading = authUiState.isLoading,
-                registrationEnabled = false,
+                registrationEnabled = true,
 
                 onLoginClick = { email, password ->
                     authViewModel.login(email, password)
