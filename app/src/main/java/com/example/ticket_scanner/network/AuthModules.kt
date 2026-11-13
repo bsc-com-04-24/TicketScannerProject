@@ -1,5 +1,10 @@
 package com.example.ticket_scanner.network
 
+enum class AccountType {
+    CUSTOMER,
+    ADMIN
+}
+
 data class LoginRequest(
     val email: String,
     val password: String
@@ -12,8 +17,7 @@ data class AuthResponse(
 
 data class RegisterRequest(
     val email: String,
-    val password: String,
-    val role: String = "CUSTOMER"
+    val password: String
 )
 
 data class RefreshTokenRequest(

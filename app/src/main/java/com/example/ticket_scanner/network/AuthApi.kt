@@ -16,4 +16,9 @@ interface AuthApi {
         @Body request: RegisterRequest
     ): Response<AuthResponse>
 
+    @POST("api/auth/register/admin")
+    suspend fun registerAdmin(
+        @Body request: RegisterRequest
+    ): Response<AuthResponse>
+
 }

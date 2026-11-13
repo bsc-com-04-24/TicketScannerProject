@@ -17,11 +17,18 @@ object RetrofitClient {
 
     val baseUrl: String = BuildConfig.BACKEND_BASE_URL
 
+    private val publicAuthPaths = setOf(
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/google",
+        "/api/auth/refresh"
+    )
+
     private val gson = Gson()
     private val refreshClient = OkHttpClient.Builder()
         .addInterceptor(
             HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = HttpLoggingInterceptor.Level.BASIC
             }
         )
         .build()
@@ -31,15 +38,14 @@ object RetrofitClient {
     private val httpClient = OkHttpClient.Builder()
         .addInterceptor(
             HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = HttpLoggingInterceptor.Level.BASIC
             }
         )
         .addInterceptor { chain ->
             val request = chain.request()
             val path = request.url.encodedPath
-            val isAuthRequest = path.startsWith("/api/auth/")
             val token = AuthTokenStore.accessToken()
-            if (isAuthRequest || token.isNullOrBlank()) {
+            if (isPublicAuthPath(path) || token.isNullOrBlank()) {
                 chain.proceed(request)
             } else {
                 chain.proceed(
@@ -69,7 +75,7 @@ object RetrofitClient {
 
         override fun authenticate(route: Route?, response: Response): Request? {
             val path = response.request.url.encodedPath
-            if (path.startsWith("/api/auth/")) return null
+            if (RetrofitClient.isPublicAuthPath(path)) return null
 
             if (responseCount(response) > 1) {
                 AuthTokenStore.clear()
@@ -121,6 +127,7 @@ object RetrofitClient {
                         .header("Authorization", "Bearer ${tokens.token}")
                         .build()
                 }
+
             }
         }
 
@@ -134,4 +141,6 @@ object RetrofitClient {
             return count
         }
     }
+
+    private fun isPublicAuthPath(path: String): Boolean = path in publicAuthPaths
 }

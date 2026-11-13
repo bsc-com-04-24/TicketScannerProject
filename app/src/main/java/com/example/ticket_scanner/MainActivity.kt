@@ -28,6 +28,7 @@ import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
 import com.example.ticket_scanner.network.AuthTokenStore
+import com.example.ticket_scanner.network.AccountType
 import com.example.ticket_scanner.network.TicketValidationRepository
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
@@ -82,6 +83,7 @@ fun TicketScannerMainApp(
 
     var showSplash by remember { mutableStateOf(true) }
     var isLoggedIn by remember { mutableStateOf(AuthTokenStore.hasTokens()) }
+    var showAdminRegistration by remember { mutableStateOf(false) }
     var loginError by remember { mutableStateOf<String?>(null) }
 
     val authViewModel: AuthViewModel = viewModel()
@@ -127,6 +129,11 @@ fun TicketScannerMainApp(
     val coroutineScope = rememberCoroutineScope()
 
     // BACK NAVIGATION
+    BackHandler(enabled = showAdminRegistration) {
+        showAdminRegistration = false
+        authViewModel.clearMessages()
+    }
+
     BackHandler(enabled = showTicketResult) {
         showTicketResult = false
     }
@@ -183,11 +190,45 @@ fun TicketScannerMainApp(
                     }
                 },
 
-                onRegisterClick = { fullName, email, password, confirmPassword, enableBiometric ->
-                    authViewModel.register(fullName, email, password, confirmPassword, enableBiometric)
+                onRegisterClick = { fullName, email, password, confirmPassword, enableBiometric, accountType ->
+                    authViewModel.register(
+                        fullName,
+                        email,
+                        password,
+                        confirmPassword,
+                        enableBiometric,
+                        accountType = accountType
+                    )
                 },
 
                 onModeChange = {
+                    authViewModel.clearMessages()
+                }
+            )
+        }
+
+        // ADMIN-AUTHORIZED ACCOUNT REGISTRATION
+        else if (showAdminRegistration) {
+            AuthScreen(
+                initialMode = AuthMode.REGISTER,
+                defaultAccountType = AccountType.ADMIN,
+                adminRegistrationMode = true,
+                errorMessage = authUiState.errorMessage,
+                successMessage = authUiState.successMessage,
+                isLoading = authUiState.isLoading,
+                onRegisterClick = { fullName, email, password, confirmPassword, _, accountType ->
+                    authViewModel.register(
+                        fullName,
+                        email,
+                        password,
+                        confirmPassword,
+                        enableBiometric = false,
+                        accountType = accountType,
+                        preserveCurrentSession = true
+                    )
+                },
+                onCancelRegistration = {
+                    showAdminRegistration = false
                     authViewModel.clearMessages()
                 }
             )
@@ -485,6 +526,11 @@ fun TicketScannerMainApp(
                             },
                             onOpenDownloadedTickets = {
                                 showDownloadedTickets = true
+                            },
+                            canCreateAccounts = AuthTokenStore.hasRole("ROLE_ADMIN"),
+                            onCreateAccount = {
+                                authViewModel.clearMessages()
+                                showAdminRegistration = true
                             },
                             onLogout = {
                                 authViewModel.logout()

@@ -2,6 +2,7 @@ package com.example.ticket_scanner.ui.screens
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,9 +39,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +60,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ticket_scanner.network.AccountType
 import com.example.ticket_scanner.ui.theme.BluePrimary
 import com.example.ticket_scanner.ui.theme.RejectedRed
 import com.example.ticket_scanner.ui.theme.TicketScannerTheme
@@ -76,12 +80,16 @@ fun AuthScreen(
     registrationEnabled: Boolean = true,
     isBiometricAvailable: Boolean = false,
     isBiometricStored: Boolean = false,
+    initialMode: AuthMode = AuthMode.SIGN_IN,
+    defaultAccountType: AccountType = AccountType.CUSTOMER,
+    adminRegistrationMode: Boolean = false,
     onLoginClick: (email: String, password: String) -> Unit = { _, _ -> },
-    onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String, enableBiometric: Boolean) -> Unit = { _, _, _, _, _ -> },
+    onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String, enableBiometric: Boolean, accountType: AccountType?) -> Unit = { _, _, _, _, _, _ -> },
     onBiometricLoginClick: () -> Unit = {},
-    onModeChange: () -> Unit = {}
+    onModeChange: () -> Unit = {},
+    onCancelRegistration: () -> Unit = {}
 ) {
-    var authMode by remember { mutableStateOf(AuthMode.SIGN_IN) }
+    var authMode by remember(initialMode) { mutableStateOf(initialMode) }
 
     // Form inputs for Sign In
     var loginEmail by remember { mutableStateOf("") }
@@ -93,6 +101,10 @@ fun AuthScreen(
     var regPassword by remember { mutableStateOf("") }
     var regConfirmPassword by remember { mutableStateOf("") }
     var enableBiometricEnrollment by remember { mutableStateOf(true) }
+    var registrationRole by remember(defaultAccountType) {
+        mutableStateOf<AccountType?>(defaultAccountType)
+    }
+    var accountTypeError by remember { mutableStateOf(false) }
 
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
@@ -157,8 +169,10 @@ fun AuthScreen(
                 Text(
                     text = if (authMode == AuthMode.SIGN_IN) {
                         "Sign in to access scanner"
+                    } else if (adminRegistrationMode) {
+                        "Create an account with your administrator session"
                     } else {
-                        "Create a validator account"
+                        "Create a customer account"
                     },
                     color = textColor.copy(alpha = 0.7f),
                     fontSize = 14.sp,
@@ -369,6 +383,80 @@ fun AuthScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
 
+                            if (adminRegistrationMode) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Account type",
+                                    color = textColor,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                AccountType.entries.forEach { accountType ->
+                                    Card(
+                                        onClick = {
+                                            registrationRole = accountType
+                                            accountTypeError = false
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surface
+                                        ),
+                                        border = if (registrationRole == accountType) {
+                                            BorderStroke(1.dp, BluePrimary)
+                                        } else {
+                                            null
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(
+                                                selected = registrationRole == accountType,
+                                                onClick = {
+                                                    registrationRole = accountType
+                                                    accountTypeError = false
+                                                }
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = if (accountType == AccountType.CUSTOMER) {
+                                                        "Customer"
+                                                    } else {
+                                                        "Administrator"
+                                                    },
+                                                    color = textColor,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                Text(
+                                                    text = if (accountType == AccountType.CUSTOMER) {
+                                                        "Access customer ticket features."
+                                                    } else {
+                                                        "Your signed-in administrator account authorizes this request."
+                                                    },
+                                                    color = textColor.copy(alpha = 0.7f),
+                                                    fontSize = 12.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+                                if (accountTypeError) {
+                                    Text(
+                                        text = "Please select an account type.",
+                                        color = RejectedRed,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(12.dp))
 
                             // Email Address Input
@@ -529,13 +617,19 @@ fun AuthScreen(
                             // Register Submit Button
                             Button(
                                 onClick = {
-                                    onRegisterClick(
-                                        regFullName,
-                                        regEmail,
-                                        regPassword,
-                                        regConfirmPassword,
-                                        enableBiometricEnrollment && isBiometricAvailable
-                                    )
+                                    val selectedAccountType = registrationRole
+                                    if (selectedAccountType == null) {
+                                        accountTypeError = true
+                                    } else {
+                                        onRegisterClick(
+                                            regFullName,
+                                            regEmail,
+                                            regPassword,
+                                            regConfirmPassword,
+                                            enableBiometricEnrollment && isBiometricAvailable,
+                                            selectedAccountType
+                                        )
+                                    }
                                 },
                                 enabled = !isLoading,
                                 colors = ButtonDefaults.buttonColors(
@@ -565,25 +659,34 @@ fun AuthScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // Switch to Sign In Mode Link
-                            Row(
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Already have an account? ",
-                                    color = textColor.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = "Sign In",
-                                    color = BluePrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.clickable {
-                                        authMode = AuthMode.SIGN_IN
-                                        onModeChange()
-                                    }
-                                )
+                            if (adminRegistrationMode) {
+                                TextButton(
+                                    onClick = onCancelRegistration,
+                                    enabled = !isLoading
+                                ) {
+                                    Text("Return to app", color = BluePrimary)
+                                }
+                            } else {
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Already have an account? ",
+                                        color = textColor.copy(alpha = 0.7f),
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "Sign In",
+                                        color = BluePrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.clickable {
+                                            authMode = AuthMode.SIGN_IN
+                                            onModeChange()
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

@@ -16,7 +16,10 @@ URL. The phone and PC must be on the same reachable network, and Windows
 Firewall must allow inbound TCP port 1234.
 
 Online ticket scans require a pre-provisioned `VALIDATOR` account. Public
-registration cannot create validator or administrator accounts. Access and
-refresh tokens are stored in app-private preferences, excluded from backup,
-and attached to protected requests; an expired access token is refreshed once.
-The offline scanner continues to use its existing local ticket store.
+registration creates customer accounts only. A signed-in `ADMIN` can use
+Settings > Create account to register another administrator; the backend
+authorizes this operation and assigns the role itself. The first administrator
+must be provisioned through a trusted process. Access and refresh tokens are
+stored in app-private preferences, excluded from backup, and attached to
+protected requests; an expired access token is refreshed once. The offline
+scanner continues to use its existing local ticket store.

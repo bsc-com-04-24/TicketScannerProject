@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
@@ -63,12 +64,15 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     onToggleOffline: () -> Unit = {},
     onOpenDownloadedTickets: () -> Unit = {},
+    canCreateAccounts: Boolean = false,
+    onCreateAccount: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     var autoSyncEnabled by remember { mutableStateOf(true) }
     var soundVibrationEnabled by remember { mutableStateOf(true) }
     var pushNotificationsEnabled by remember { mutableStateOf(true) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -148,10 +152,20 @@ fun SettingsScreen(
                     onClick = onToggleOffline
                 )
 
+                if (canCreateAccounts) {
+                    SettingItemRow(
+                        title = "Create Validator Account",
+                        subtitle = "Register a new operator or validator account",
+                        icon = Icons.Default.Person,
+                        onClick = onCreateAccount
+                    )
+                }
+
                 SettingItemRow(
                     title = "About Ticket Scanner",
                     subtitle = "Version 1.0.0 • Build 2025.1",
-                    icon = Icons.Default.Info
+                    icon = Icons.Default.Info,
+                    onClick = { showAboutDialog = true }
                 )
 
                 SettingItemRow(
@@ -170,6 +184,39 @@ fun SettingsScreen(
             onTabSelected = onTabSelected,
             isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { Text("About Ticket Scanner") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Event Ticket Scanner is a professional mobile gate check-in application for event organizers and validators. It enables fast online and offline ticket scanning, attendee validation, and real-time event analytics. Built with secure JWT authentication and local SQLite caching, it guarantees reliable entry verification anywhere.",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 20.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Version 1.0.0 (Build 2025.1)\nPowered by Spring Boot & Jetpack Compose",
+                        fontSize = 12.sp,
+                        color = TextMuted
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showAboutDialog = false },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BluePrimary
+                    )
+                ) {
+                    Text("Close", color = Color.White)
+                }
+            }
         )
     }
 

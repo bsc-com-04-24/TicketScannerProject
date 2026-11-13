@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ticket_scanner.network.AccountType
 import com.example.ticket_scanner.network.AuthRepository
 import com.example.ticket_scanner.network.AuthResponse
 import com.example.ticket_scanner.network.AuthTokenStore
@@ -88,10 +89,17 @@ class AuthViewModel(
         email: String,
         password: String,
         confirmPassword: String,
-        enableBiometric: Boolean
+        enableBiometric: Boolean,
+        accountType: AccountType?,
+        preserveCurrentSession: Boolean = false
     ) {
         val trimmedName = fullName.trim()
         val trimmedEmail = email.trim()
+
+        if (accountType == null) {
+            uiState = AuthUiState(errorMessage = "Please select an account type.")
+            return
+        }
 
         // 1. Required Fields Validation
         if (trimmedName.isEmpty()) {
@@ -131,18 +139,29 @@ class AuthViewModel(
             uiState = AuthUiState(isLoading = true)
 
             try {
-                // Pass email, password, and default role VALIDATOR to Spring Boot backend
                 val response = authRepository.register(
                     email = trimmedEmail,
                     password = password,
-                    role = "VALIDATOR"
+                    accountType = accountType
                 )
 
                 if (response.isSuccessful) {
                     val body = response.body()
-                    if (body != null) {
-                        AuthTokenStore.save(body, enableBiometric)
+                    if (body == null) {
+                        uiState = AuthUiState(
+                            errorMessage = "The server returned an empty registration response."
+                        )
+                        return@launch
                     }
+
+                    if (preserveCurrentSession) {
+                        uiState = AuthUiState(
+                            successMessage = "Account created. Your current session is unchanged."
+                        )
+                        return@launch
+                    }
+
+                    AuthTokenStore.save(body, enableBiometric)
                     uiState = AuthUiState(
                         authResponse = body,
                         successMessage = "Registration successful!"

@@ -2,6 +2,10 @@ package com.example.ticket_scanner.network
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.google.gson.JsonParseException
+import com.google.gson.JsonParser
+import java.nio.charset.StandardCharsets
+import java.util.Base64
 
 object AuthTokenStore {
 
@@ -29,6 +33,25 @@ object AuthTokenStore {
     fun hasTokens(): Boolean =
         !accessToken().isNullOrBlank()
 
+    fun hasRole(authority: String): Boolean {
+        val payload = accessToken()?.split('.')?.getOrNull(1) ?: return false
+        val decoded = try {
+            Base64.getUrlDecoder().decode(payload)
+        } catch (_: IllegalArgumentException) {
+            return false
+        }
+        val claims = try {
+            JsonParser.parseString(String(decoded, StandardCharsets.UTF_8))
+        } catch (_: JsonParseException) {
+            return false
+        }
+        // This only controls UI affordances; protected APIs still verify the signed token.
+        return claims.isJsonObject &&
+                claims.asJsonObject.get("role")?.let {
+                    it.isJsonPrimitive && it.asJsonPrimitive.isString && it.asString == authority
+                } == true
+    }
+
     fun isBiometricEnabled(): Boolean = preferences?.getBoolean(BIOMETRIC_ENABLED_KEY, false) == true
 
     fun setBiometricEnabled(enabled: Boolean) {
@@ -37,11 +60,12 @@ object AuthTokenStore {
 
     fun save(response: AuthResponse, enableBiometric: Boolean = false) {
         require(!response.token.isNullOrBlank()) { "The server returned no access token." }
+        require(!response.refreshToken.isNullOrBlank()) { "The server returned no refresh token." }
 
         checkNotNull(preferences) { "AuthTokenStore has not been initialized." }
             .edit()
             .putString(ACCESS_TOKEN_KEY, response.token)
-            .putString(REFRESH_TOKEN_KEY, response.token)
+            .putString(REFRESH_TOKEN_KEY, response.refreshToken)
             .putBoolean(BIOMETRIC_ENABLED_KEY, enableBiometric)
             .apply()
     }

@@ -6,7 +6,7 @@ plugins {
 
 val configuredBackendBaseUrl = providers.gradleProperty("BACKEND_BASE_URL")
     .orElse(providers.environmentVariable("BACKEND_BASE_URL"))
-    .getOrElse("http://192.168.137.216:1234/")
+    .getOrElse("http://10.57.159.30:1234/")
     .trim()
 val backendBaseUrl = configuredBackendBaseUrl.let { value ->
     require(value.startsWith("http://") || value.startsWith("https://")) {

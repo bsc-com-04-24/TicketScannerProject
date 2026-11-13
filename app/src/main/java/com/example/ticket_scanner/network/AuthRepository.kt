@@ -15,15 +15,17 @@ class AuthRepository {
     suspend fun register(
         email: String,
         password: String,
-        role: String = "CUSTOMER"
+        accountType: AccountType
     ): retrofit2.Response<AuthResponse> {
 
         val request = RegisterRequest(
             email = email,
-            password = password,
-            role = role
+            password = password
         )
 
-        return RetrofitClient.authApi.register(request)
+        return when (accountType) {
+            AccountType.CUSTOMER -> RetrofitClient.authApi.register(request)
+            AccountType.ADMIN -> RetrofitClient.authApi.registerAdmin(request)
+        }
     }
 }
