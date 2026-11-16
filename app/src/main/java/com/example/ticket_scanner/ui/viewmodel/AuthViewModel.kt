@@ -89,7 +89,7 @@ class AuthViewModel(
         email: String,
         password: String,
         confirmPassword: String,
-        enableBiometric: Boolean,
+        enableBiometric: Boolean = false,
         accountType: AccountType?,
         preserveCurrentSession: Boolean = false
     ) {
@@ -156,15 +156,15 @@ class AuthViewModel(
 
                     if (preserveCurrentSession) {
                         uiState = AuthUiState(
-                            successMessage = "Account created. Your current session is unchanged."
+                            successMessage = "Account created successfully!"
                         )
                         return@launch
                     }
 
-                    AuthTokenStore.save(body, enableBiometric)
+                    // Task 2 requirement: Do NOT automatically log the user in or save tokens on regular registration.
+                    // Navigate user to Login screen and display success message.
                     uiState = AuthUiState(
-                        authResponse = body,
-                        successMessage = "Registration successful!"
+                        successMessage = "Account created successfully! Please log in with your new credentials."
                     )
                 } else {
                     val errorMsg = parseErrorMessage(response)
