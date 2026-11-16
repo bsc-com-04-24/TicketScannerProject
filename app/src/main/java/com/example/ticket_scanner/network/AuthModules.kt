@@ -23,3 +23,7 @@ data class RegisterRequest(
 data class RefreshTokenRequest(
     val refreshToken: String
 )
+
+data class ForgotPasswordRequest(
+    val email: String
+)

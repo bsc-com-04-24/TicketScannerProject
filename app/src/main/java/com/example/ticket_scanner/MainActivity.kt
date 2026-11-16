@@ -175,6 +175,10 @@ fun TicketScannerMainApp(
                     authViewModel.login(email, password)
                 },
 
+                onForgotPasswordClick = { email ->
+                    authViewModel.forgotPassword(email)
+                },
+
                 onBiometricLoginClick = {
                     if (activity != null) {
                         BiometricHelper.authenticate(

@@ -84,6 +84,44 @@ class AuthViewModel(
         }
     }
 
+    fun forgotPassword(email: String) {
+        val trimmedEmail = email.trim()
+
+        if (trimmedEmail.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter your email address.")
+            return
+        }
+
+        if (!emailRegex.matches(trimmedEmail)) {
+            uiState = AuthUiState(errorMessage = "Please enter a valid email address.")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState = AuthUiState(isLoading = true)
+
+            try {
+                val response = authRepository.forgotPassword(trimmedEmail)
+                if (response.isSuccessful || response.code() == 404) {
+                    uiState = AuthUiState(
+                        successMessage = "Password reset instructions have been sent to $trimmedEmail if registered."
+                    )
+                } else {
+                    val errorMsg = parseErrorMessage(response)
+                    uiState = AuthUiState(errorMessage = errorMsg)
+                }
+            } catch (e: IOException) {
+                uiState = AuthUiState(
+                    successMessage = "Password reset instructions have been sent to $trimmedEmail if registered."
+                )
+            } catch (e: Exception) {
+                uiState = AuthUiState(
+                    errorMessage = "Error: ${e.message}"
+                )
+            }
+        }
+    }
+
     fun register(
         fullName: String,
         email: String,

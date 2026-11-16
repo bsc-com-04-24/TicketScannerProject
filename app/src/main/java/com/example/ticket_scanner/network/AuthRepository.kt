@@ -28,4 +28,8 @@ class AuthRepository {
             AccountType.ADMIN -> RetrofitClient.authApi.registerAdmin(request)
         }
     }
+
+    suspend fun forgotPassword(email: String): retrofit2.Response<Void> {
+        return RetrofitClient.authApi.forgotPassword(ForgotPasswordRequest(email))
+    }
 }
