@@ -82,9 +82,7 @@ fun SettingsScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 70.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             // Header Top Bar
             Row(
@@ -104,7 +102,8 @@ fun SettingsScreen(
 
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .weight(1f)
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -178,6 +177,9 @@ fun SettingsScreen(
                     tintColor = RejectedRed,
                     onClick = { showLogoutDialog = true }
                 )
+
+                // Bottom padding spacer to prevent items from being hidden behind bottom navigation bar
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
 
