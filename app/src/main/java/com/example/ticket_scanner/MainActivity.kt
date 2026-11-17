@@ -111,10 +111,6 @@ fun TicketScannerMainApp(
         HistoryStorageManager.saveHistory(context, scanHistoryItems)
     }
 
-    var notificationItems by remember {
-        mutableStateOf(MockData.sampleNotifications)
-    }
-
     var showTicketResult by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
     var isOfflineMode by remember { mutableStateOf(false) }
@@ -469,26 +465,6 @@ fun TicketScannerMainApp(
                                 selectedTab = tab
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(tab.ordinal)
-                                }
-                            }
-                        )
-                    }
-
-                    // ALERTS
-                    NavTab.ALERTS -> {
-                        AlertsScreen(
-                            notifications = notificationItems,
-                            selectedTab = selectedTab,
-                            isDarkMode = isDarkMode,
-                            onTabSelected = { tab ->
-                                selectedTab = tab
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(tab.ordinal)
-                                }
-                            },
-                            onMarkAllAsRead = {
-                                notificationItems = notificationItems.map {
-                                    it.copy(isRead = true)
                                 }
                             }
                         )
