@@ -11,8 +11,8 @@ data class LoginRequest(
 )
 
 data class AuthResponse(
-    val token: String,
-    val refreshToken: String
+    val token: String?,
+    val refreshToken: String?
 )
 
 data class RegisterRequest(

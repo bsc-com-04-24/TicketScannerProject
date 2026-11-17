@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,8 +30,6 @@ import androidx.compose.ui.unit.sp
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
-import com.example.ticket_scanner.ui.theme.LightBackground
-import com.example.ticket_scanner.ui.theme.TextDark
 import com.example.ticket_scanner.ui.theme.TextMuted
 
 /** The Events tab: a static page of sample events to browse. */
@@ -38,17 +37,16 @@ import com.example.ticket_scanner.ui.theme.TextMuted
 fun EventsScreen(
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
+    isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(LightBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 70.dp)
+            modifier = Modifier.fillMaxSize()
         ) {
             // Header
             Row(
@@ -68,8 +66,8 @@ fun EventsScreen(
             }
 
             LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(16.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 items(SampleEvents.all, key = { it.name }) { event ->
@@ -81,7 +79,7 @@ fun EventsScreen(
         BottomNavBar(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
-            isDark = false,
+            isDark = isDarkMode,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -91,7 +89,7 @@ fun EventsScreen(
 private fun EventCard(event: SampleEvent) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -124,7 +122,7 @@ private fun EventCard(event: SampleEvent) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = event.name,
-                    color = TextDark,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )

@@ -470,7 +470,8 @@ fun TicketScannerMainApp(
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(tab.ordinal)
                                 }
-                            }
+                            },
+                            isDarkMode = isDarkMode
                         )
                     }
 
