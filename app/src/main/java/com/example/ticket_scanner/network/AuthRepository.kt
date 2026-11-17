@@ -1,0 +1,39 @@
+package com.example.ticket_scanner.network
+
+class AuthRepository {
+
+    suspend fun login(
+        email: String,
+        password: String
+    ): retrofit2.Response<AuthResponse> {
+
+        val request = LoginRequest(email, password)
+
+        return RetrofitClient.authApi.login(request)
+    }
+
+    suspend fun register(
+        email: String,
+        password: String,
+        accountType: AccountType
+    ): retrofit2.Response<AuthResponse> {
+
+        val request = RegisterRequest(
+            email = email,
+            password = password
+        )
+
+        return when (accountType) {
+            AccountType.CUSTOMER -> RetrofitClient.authApi.register(request)
+            AccountType.ADMIN -> RetrofitClient.authApi.registerAdmin(request)
+        }
+    }
+
+    suspend fun forgotPassword(email: String): retrofit2.Response<Void> {
+        return RetrofitClient.authApi.forgotPassword(ForgotPasswordRequest(email))
+    }
+
+    suspend fun resetPassword(token: String, newPassword: String): retrofit2.Response<Void> {
+        return RetrofitClient.authApi.resetPassword(ResetPasswordRequest(token, newPassword))
+    }
+}

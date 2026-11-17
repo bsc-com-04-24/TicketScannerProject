@@ -1,1 +1,5 @@
 /build
+.kotlin/
+.idea/caches/
+.idea/workspace.xml
+.idea/tasks.xml

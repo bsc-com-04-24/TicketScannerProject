@@ -1,0 +1,291 @@
+package com.example.ticket_scanner.ui.viewmodel
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.ticket_scanner.network.AccountType
+import com.example.ticket_scanner.network.AuthRepository
+import com.example.ticket_scanner.network.AuthResponse
+import com.example.ticket_scanner.network.AuthTokenStore
+import com.google.gson.JsonParser
+import kotlinx.coroutines.launch
+import java.io.IOException
+
+data class AuthUiState(
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val successMessage: String? = null,
+    val authResponse: AuthResponse? = null
+)
+
+class AuthViewModel(
+    private val authRepository: AuthRepository = AuthRepository()
+) : ViewModel() {
+
+    var uiState by mutableStateOf(AuthUiState())
+        private set
+
+    private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
+
+    fun clearMessages() {
+        uiState = uiState.copy(errorMessage = null, successMessage = null)
+    }
+
+    fun logout(sessionExpired: Boolean = false) {
+        AuthTokenStore.clear()
+        uiState = AuthUiState()
+    }
+
+    fun login(email: String, password: String) {
+        val trimmedEmail = email.trim()
+
+        if (trimmedEmail.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter your email or username.")
+            return
+        }
+
+        if (password.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter your password.")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState = AuthUiState(isLoading = true)
+
+            try {
+                val response = authRepository.login(trimmedEmail, password)
+
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body != null) {
+                        AuthTokenStore.save(body, AuthTokenStore.isBiometricEnabled())
+                    }
+                    uiState = AuthUiState(
+                        authResponse = body,
+                        successMessage = "Login successful!"
+                    )
+                } else {
+                    val errorMsg = parseErrorMessage(response)
+                    uiState = AuthUiState(
+                        errorMessage = errorMsg
+                    )
+                }
+            } catch (e: IOException) {
+                uiState = AuthUiState(
+                    errorMessage = "Cannot connect to the server. Check network connection and server status."
+                )
+            } catch (e: Exception) {
+                uiState = AuthUiState(
+                    errorMessage = "Something went wrong: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun forgotPassword(email: String) {
+        val trimmedEmail = email.trim()
+
+        if (trimmedEmail.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter your email address.")
+            return
+        }
+
+        if (!emailRegex.matches(trimmedEmail)) {
+            uiState = AuthUiState(errorMessage = "Please enter a valid email address.")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState = AuthUiState(isLoading = true)
+
+            try {
+                val response = authRepository.forgotPassword(trimmedEmail)
+                if (response.isSuccessful || response.code() == 404) {
+                    uiState = AuthUiState(
+                        successMessage = "Password reset instructions have been sent to $trimmedEmail if registered."
+                    )
+                } else {
+                    val errorMsg = parseErrorMessage(response)
+                    uiState = AuthUiState(errorMessage = errorMsg)
+                }
+            } catch (e: IOException) {
+                uiState = AuthUiState(
+                    successMessage = "Password reset instructions have been sent to $trimmedEmail if registered."
+                )
+            } catch (e: Exception) {
+                uiState = AuthUiState(
+                    errorMessage = "Error: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun resetPassword(token: String, newPassword: String, confirmPassword: String) {
+        val trimmedToken = token.trim()
+
+        if (trimmedToken.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter the reset token or code.")
+            return
+        }
+
+        if (newPassword.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter a new password.")
+            return
+        }
+
+        if (newPassword.length < 6) {
+            uiState = AuthUiState(errorMessage = "Password must be at least 6 characters long.")
+            return
+        }
+
+        if (newPassword != confirmPassword) {
+            uiState = AuthUiState(errorMessage = "Passwords do not match.")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState = AuthUiState(isLoading = true)
+
+            try {
+                val response = authRepository.resetPassword(trimmedToken, newPassword)
+
+                if (response.isSuccessful) {
+                    uiState = AuthUiState(
+                        successMessage = "Password successfully reset! Please sign in with your new credentials."
+                    )
+                } else {
+                    val errorMsg = parseErrorMessage(response)
+                    uiState = AuthUiState(errorMessage = errorMsg)
+                }
+            } catch (e: IOException) {
+                uiState = AuthUiState(
+                    errorMessage = "Cannot connect to the server. Check network connection and server status."
+                )
+            } catch (e: Exception) {
+                uiState = AuthUiState(
+                    errorMessage = "Reset error: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun register(
+        fullName: String,
+        email: String,
+        password: String,
+        confirmPassword: String,
+        enableBiometric: Boolean = false,
+        accountType: AccountType?,
+        preserveCurrentSession: Boolean = false
+    ) {
+        val trimmedName = fullName.trim()
+        val trimmedEmail = email.trim()
+
+        if (accountType == null) {
+            uiState = AuthUiState(errorMessage = "Please select an account type.")
+            return
+        }
+
+        // 1. Required Fields Validation
+        if (trimmedName.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Full name is required.")
+            return
+        }
+
+        if (trimmedEmail.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Email address is required.")
+            return
+        }
+
+        // 2. Email Format Validation
+        if (!emailRegex.matches(trimmedEmail)) {
+            uiState = AuthUiState(errorMessage = "Please enter a valid email address.")
+            return
+        }
+
+        // 3. Password Validation
+        if (password.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Password is required.")
+            return
+        }
+
+        if (password.length < 6) {
+            uiState = AuthUiState(errorMessage = "Password must be at least 6 characters long.")
+            return
+        }
+
+        // 4. Password Matching Validation
+        if (password != confirmPassword) {
+            uiState = AuthUiState(errorMessage = "Passwords do not match.")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState = AuthUiState(isLoading = true)
+
+            try {
+                val response = authRepository.register(
+                    email = trimmedEmail,
+                    password = password,
+                    accountType = accountType
+                )
+
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    if (body == null) {
+                        uiState = AuthUiState(
+                            errorMessage = "The server returned an empty registration response."
+                        )
+                        return@launch
+                    }
+
+                    if (preserveCurrentSession) {
+                        uiState = AuthUiState(
+                            successMessage = "Account created successfully!"
+                        )
+                        return@launch
+                    }
+
+                    // Task 2 requirement: Do NOT automatically log the user in or save tokens on regular registration.
+                    // Navigate user to Login screen and display success message.
+                    uiState = AuthUiState(
+                        successMessage = "Account created successfully! Please log in with your new credentials."
+                    )
+                } else {
+                    val errorMsg = parseErrorMessage(response)
+                    uiState = AuthUiState(
+                        errorMessage = errorMsg
+                    )
+                }
+            } catch (e: IOException) {
+                uiState = AuthUiState(
+                    errorMessage = "Cannot connect to the server. Check network connection and server status."
+                )
+            } catch (e: Exception) {
+                uiState = AuthUiState(
+                    errorMessage = "Registration error: ${e.message}"
+                )
+            }
+        }
+    }
+
+    private fun parseErrorMessage(response: retrofit2.Response<*>): String {
+        return try {
+            val errorBody = response.errorBody()?.string()
+            if (!errorBody.isNullOrBlank()) {
+                val json = JsonParser.parseString(errorBody)
+                if (json.isJsonObject) {
+                    val message = json.asJsonObject.get("message")?.takeIf { it.isJsonPrimitive }?.asString
+                    if (!message.isNullOrBlank()) {
+                        return message
+                    }
+                }
+            }
+            "Request failed: HTTP ${response.code()} ${response.message()}"
+        } catch (_: Exception) {
+            "Request failed: HTTP ${response.code()} ${response.message()}"
+        }
+    }
+}

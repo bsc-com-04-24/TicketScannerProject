@@ -1,8 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+
+
 <resources>
-    <style name="Theme.Ticket_Scanner" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.TicketCheckin" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#6750A4</item>
-        <item name="android:statusBarColor">#FFFFFF</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
