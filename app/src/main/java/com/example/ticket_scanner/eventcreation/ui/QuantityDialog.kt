@@ -24,9 +24,11 @@ import com.example.ticket_scanner.ui.theme.TextMuted
 fun QuantityDialog(
     quantity: String,
     ticketType: String,
+    price: String,
     error: String?,
     onQuantityChange: (String) -> Unit,
     onTicketTypeChange: (String) -> Unit,
+    onPriceChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -61,6 +63,17 @@ fun QuantityDialog(
                     label = { Text("Ticket type") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = onPriceChange,
+                    label = { Text("Price ($)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }

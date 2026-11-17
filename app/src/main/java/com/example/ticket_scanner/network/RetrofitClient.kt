@@ -66,6 +66,7 @@ object RetrofitClient {
 
     val authApi: AuthApi = retrofit.create(AuthApi::class.java)
     val ticketApi: TicketApi = retrofit.create(TicketApi::class.java)
+    val eventApi: EventApi = retrofit.create(EventApi::class.java)
 
     private class AuthTokenAuthenticator(
         private val baseUrl: String,

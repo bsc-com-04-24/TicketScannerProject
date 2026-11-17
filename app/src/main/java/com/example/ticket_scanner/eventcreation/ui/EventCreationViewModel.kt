@@ -11,10 +11,18 @@ import com.example.ticket_scanner.eventcreation.model.EventForm
 import com.example.ticket_scanner.eventcreation.model.GeneratedTicket
 import com.example.ticket_scanner.localdb.LocalTicketStore
 import com.example.ticket_scanner.localdb.StoredEvent
+import com.example.ticket_scanner.network.CreateEventRequest
+import com.example.ticket_scanner.network.CreateTicketTypeRequest
+import com.example.ticket_scanner.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.TimeZone
 
@@ -71,6 +79,9 @@ class EventCreationViewModel : ViewModel() {
     var ticketTypeInput by mutableStateOf("General Admission")
         private set
 
+    var priceInput by mutableStateOf("10.00")
+        private set
+
     var quantityError by mutableStateOf<String?>(null)
         private set
 
@@ -81,6 +92,10 @@ class EventCreationViewModel : ViewModel() {
 
     fun onTicketTypeChange(text: String) {
         ticketTypeInput = text
+    }
+
+    fun onPriceChange(text: String) {
+        priceInput = text.filter { it.isDigit() || it == '.' }
     }
 
     fun dismissQuantityDialog() {
@@ -124,7 +139,7 @@ class EventCreationViewModel : ViewModel() {
     var saveError by mutableStateOf<String?>(null)
         private set
 
-    /** "Save tickets": store the event and its tickets in the phone's database. */
+    /** "Save tickets": store the event and its tickets in the MySQL database via backend API and locally. */
     fun saveTickets() {
         val current = _step.value as? EventCreationStep.Tickets ?: return
         if (isSaving || isSaved) return
@@ -133,10 +148,64 @@ class EventCreationViewModel : ViewModel() {
         saveError = null
         viewModelScope.launch {
             try {
+                // 1. Format start and end times to ISO-8601 for Spring Boot backend
+                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                val startTimeStr = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(current.event.startMillis),
+                    ZoneId.systemDefault()
+                ).format(formatter)
+                val endTimeStr = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(current.event.endMillis),
+                    ZoneId.systemDefault()
+                ).format(formatter)
+
+                val eventRequest = CreateEventRequest(
+                    title = current.event.name,
+                    venue = current.event.venue,
+                    location = current.event.venue, // fallback to venue
+                    startTime = startTimeStr,
+                    endTime = endTimeStr
+                )
+
+                // 2. Call backend to create event in MySQL database
+                val eventResponse = RetrofitClient.eventApi.createEvent(eventRequest)
+                if (!eventResponse.isSuccessful) {
+                    val errCode = eventResponse.code()
+                    val errBody = eventResponse.errorBody()?.string() ?: eventResponse.message()
+                    saveError = "Failed to save event to database (HTTP $errCode): $errBody"
+                    isSaving = false
+                    return@launch
+                }
+
+                val createdEvent = eventResponse.body()
+                if (createdEvent == null) {
+                    saveError = "Backend returned empty event response."
+                    isSaving = false
+                    return@launch
+                }
+
+                // 3. Create ticket type(s) on backend
+                val priceVal = priceInput.toBigDecimalOrNull() ?: BigDecimal("10.00")
+                val ticketTypeRequest = CreateTicketTypeRequest(
+                    name = current.tickets.firstOrNull()?.ticketType ?: "General Admission",
+                    price = priceVal,
+                    totalQuantity = current.tickets.size
+                )
+
+                val ticketTypeResponse = RetrofitClient.eventApi.createTicketType(createdEvent.id, ticketTypeRequest)
+                if (!ticketTypeResponse.isSuccessful) {
+                    val errCode = ticketTypeResponse.code()
+                    val errBody = ticketTypeResponse.errorBody()?.string() ?: ticketTypeResponse.message()
+                    saveError = "Event created, but failed to save ticket types (HTTP $errCode): $errBody"
+                    isSaving = false
+                    return@launch
+                }
+
+                // 4. Save locally for offline redundancy
                 LocalTicketStore.saveEventWithTickets(current.event, current.tickets)
                 isSaved = true
             } catch (e: Exception) {
-                saveError = "Could not save the tickets. Try again."
+                saveError = "Could not save the tickets: ${e.message}"
             }
             isSaving = false
         }
@@ -241,6 +310,7 @@ class EventCreationViewModel : ViewModel() {
         showErrors = false
         quantityInput = "10"
         ticketTypeInput = "General Admission"
+        priceInput = "10.00"
         quantityError = null
         showQuantityDialog = false
         isSaving = false

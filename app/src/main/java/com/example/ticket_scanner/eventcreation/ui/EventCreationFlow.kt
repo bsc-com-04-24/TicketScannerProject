@@ -53,9 +53,11 @@ fun EventCreationFlow(
                 QuantityDialog(
                     quantity = viewModel.quantityInput,
                     ticketType = viewModel.ticketTypeInput,
+                    price = viewModel.priceInput,
                     error = viewModel.quantityError,
                     onQuantityChange = viewModel::onQuantityChange,
                     onTicketTypeChange = viewModel::onTicketTypeChange,
+                    onPriceChange = viewModel::onPriceChange,
                     onConfirm = viewModel::confirmQuantity,
                     onDismiss = viewModel::dismissQuantityDialog
                 )
