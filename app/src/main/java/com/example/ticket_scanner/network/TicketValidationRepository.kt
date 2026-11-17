@@ -1,5 +1,7 @@
 package com.example.ticket_scanner.network
 
+import com.example.ticket_scanner.validation.data.TicketRepository
+import com.example.ticket_scanner.validation.domain.TicketValidator
 import com.example.ticket_scanner.validation.model.ScannedTicket
 import com.example.ticket_scanner.validation.model.ValidationResult
 import com.example.ticket_scanner.validation.model.ValidationStatus
@@ -20,6 +22,12 @@ object TicketValidationRepository {
         val code = scanned.ticketCode.trim()
         if (code.isBlank()) {
             return result(scanned, ValidationStatus.INVALID, "Ticket code is empty.")
+        }
+
+        // Check local storage (LocalTicketStore & samples) first
+        val localRecord = TicketRepository.find(code)
+        if (localRecord != null) {
+            return TicketValidator.validate(scanned)
         }
 
         if (!AuthTokenStore.hasTokens()) {

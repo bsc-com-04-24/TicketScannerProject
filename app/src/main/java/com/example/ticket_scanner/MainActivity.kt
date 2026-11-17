@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ticket_scanner.eventcreation.ui.EventCreationFlow
 import com.example.ticket_scanner.eventcreation.ui.EventCreationViewModel
 import com.example.ticket_scanner.events.EventsScreen
+import com.example.ticket_scanner.localdb.LocalTicketStore
 import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.model.MockData
 import com.example.ticket_scanner.model.ScanItem
@@ -51,6 +52,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AuthTokenStore.initialize(applicationContext)
+        LocalTicketStore.init(applicationContext)
 
         setContent {
             val context = LocalContext.current
@@ -269,6 +271,9 @@ fun TicketScannerMainApp(
                         val actualTicketCode =
                             decoded.fields["ticketId"]
                                 ?: decoded.fields["ticketCode"]
+                                ?: decoded.fields["ticket_id"]
+                                ?: decoded.fields["code"]
+                                ?: decoded.fields["id"]
                                 ?: decoded.rawMessage
 
                         val validation = TicketValidator.validate(
@@ -378,6 +383,9 @@ fun TicketScannerMainApp(
                                     val actualTicketCode =
                                         decoded.fields["ticketId"]
                                             ?: decoded.fields["ticketCode"]
+                                            ?: decoded.fields["ticket_id"]
+                                            ?: decoded.fields["code"]
+                                            ?: decoded.fields["id"]
                                             ?: decoded.rawMessage
 
                                     val validation = TicketValidationRepository.validate(
