@@ -98,8 +98,9 @@ object LocalTicketStore {
 
     /** Finds a ticket by its code, or null if this phone has no such ticket. */
     suspend fun find(code: String): StoredTicket? = withContext(Dispatchers.IO) {
+        val trimmedCode = code.trim()
         db().readableDatabase
-            .query("tickets", null, "code = ?", arrayOf(code), null, null, null, "1")
+            .query("tickets", null, "code = ? COLLATE NOCASE", arrayOf(trimmedCode), null, null, null, "1")
             .use { if (it.moveToFirst()) it.toStoredTicket() else null }
     }
 
@@ -124,6 +125,7 @@ object LocalTicketStore {
 
     /** Marks a ticket as used (checked in). */
     suspend fun markCheckedIn(code: String, time: Long, gate: String) {
+        val trimmedCode = code.trim()
         withContext(Dispatchers.IO) {
             db().writableDatabase.update(
                 "tickets",
@@ -131,8 +133,8 @@ object LocalTicketStore {
                     put("checked_in_at", time)
                     put("gate", gate)
                 },
-                "code = ?",
-                arrayOf(code)
+                "code = ? COLLATE NOCASE",
+                arrayOf(trimmedCode)
             )
             refresh()
         }
@@ -203,9 +205,10 @@ object LocalTicketStore {
 
     /** Deletes one ticket. Scanning its QR code afterwards shows "Invalid". */
     suspend fun deleteTicket(code: String) {
+        val trimmedCode = code.trim()
         withContext(Dispatchers.IO) {
             val database = db().writableDatabase
-            database.delete("tickets", "code = ?", arrayOf(code))
+            database.delete("tickets", "code = ? COLLATE NOCASE", arrayOf(trimmedCode))
             // an event with no tickets left is removed too
             database.execSQL("DELETE FROM events WHERE id NOT IN (SELECT DISTINCT event_id FROM tickets)")
             refresh()

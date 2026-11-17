@@ -15,16 +15,21 @@ import java.util.Calendar
 object TicketRepository {
 
     private val samples: MutableMap<String, TicketRecord> =
-        sampleRecords().associateBy { it.code }.toMutableMap()
+        sampleRecords().associateBy { it.code.trim().uppercase() }.toMutableMap()
 
-    suspend fun find(code: String): TicketRecord? =
-        LocalTicketStore.find(code)?.toRecord() ?: samples[code]
+    suspend fun find(code: String): TicketRecord? {
+        val cleanCode = code.trim()
+        return LocalTicketStore.find(cleanCode)?.toRecord()
+            ?: samples[cleanCode.uppercase()]
+    }
 
     suspend fun markCheckedIn(code: String, time: Long, gate: String) {
-        if (LocalTicketStore.find(code) != null) {
-            LocalTicketStore.markCheckedIn(code, time, gate)
+        val cleanCode = code.trim()
+        if (LocalTicketStore.find(cleanCode) != null) {
+            LocalTicketStore.markCheckedIn(cleanCode, time, gate)
         } else {
-            samples[code]?.let { samples[code] = it.copy(checkedInAt = time, gate = gate) }
+            val upper = cleanCode.uppercase()
+            samples[upper]?.let { samples[upper] = it.copy(checkedInAt = time, gate = gate) }
         }
     }
 
