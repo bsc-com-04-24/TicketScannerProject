@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
@@ -67,7 +68,8 @@ import com.example.ticket_scanner.ui.theme.ValidGreen
 enum class AuthMode {
     SIGN_IN,
     REGISTER,
-    FORGOT_PASSWORD
+    FORGOT_PASSWORD,
+    RESET_PASSWORD
 }
 
 @Composable
@@ -85,6 +87,7 @@ fun AuthScreen(
     onLoginClick: (email: String, password: String) -> Unit = { _, _ -> },
     onRegisterClick: (fullName: String, email: String, password: String, confirmPassword: String, enableBiometric: Boolean, accountType: AccountType) -> Unit = { _, _, _, _, _, _ -> },
     onForgotPasswordClick: (email: String) -> Unit = {},
+    onResetPasswordClick: (token: String, newPassword: String, confirmPassword: String) -> Unit = { _, _, _ -> },
     onBiometricLoginClick: () -> Unit = {},
     onModeChange: () -> Unit = {},
     onCancelRegistration: () -> Unit = {}
@@ -106,15 +109,22 @@ fun AuthScreen(
     // Form inputs for Forgot Password
     var forgotEmail by remember { mutableStateOf("") }
 
+    // Form inputs for Reset Password
+    var resetToken by remember { mutableStateOf("") }
+    var resetNewPassword by remember { mutableStateOf("") }
+    var resetConfirmPassword by remember { mutableStateOf("") }
+
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
     val textColor = MaterialTheme.colorScheme.onSurface
 
-    // Automatically navigate to Sign In when registration succeeds
+    // Automatically navigate to Sign In when registration or password reset succeeds
     LaunchedEffect(successMessage) {
-        if (successMessage != null && successMessage.contains("Account created", ignoreCase = true) && authMode == AuthMode.REGISTER) {
-            authMode = AuthMode.SIGN_IN
+        if (successMessage != null && (successMessage.contains("Account created", ignoreCase = true) || successMessage.contains("Password successfully reset", ignoreCase = true))) {
+            if (authMode == AuthMode.REGISTER || authMode == AuthMode.RESET_PASSWORD || authMode == AuthMode.FORGOT_PASSWORD) {
+                authMode = AuthMode.SIGN_IN
+            }
         }
     }
 
@@ -178,6 +188,7 @@ fun AuthScreen(
                         AuthMode.SIGN_IN -> "Sign in to access scanner"
                         AuthMode.REGISTER -> if (adminRegistrationMode) "Create validator account (Admin)" else "Create a new account"
                         AuthMode.FORGOT_PASSWORD -> "Reset your password"
+                        AuthMode.RESET_PASSWORD -> "Enter reset code & new password"
                     },
                     color = textColor.copy(alpha = 0.7f),
                     fontSize = 14.sp,
@@ -670,7 +681,7 @@ fun AuthScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 )
 
-                                Spacer(modifier = Modifier.height(24.dp))
+                                Spacer(modifier = Modifier.height(20.dp))
 
                                 Button(
                                     onClick = { onForgotPasswordClick(forgotEmail) },
@@ -692,6 +703,189 @@ fun AuthScreen(
                                     } else {
                                         Text(
                                             text = "Send Reset Instructions",
+                                            color = Color.White,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                // Switch to Reset Password (Enter Code) Link
+                                Text(
+                                    text = "Have a reset code? Enter code",
+                                    color = BluePrimary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.clickable {
+                                        authMode = AuthMode.RESET_PASSWORD
+                                        onModeChange()
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Remember your password? ",
+                                        color = textColor.copy(alpha = 0.7f),
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "Sign In",
+                                        color = BluePrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.clickable {
+                                            authMode = AuthMode.SIGN_IN
+                                            onModeChange()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        AuthMode.RESET_PASSWORD -> {
+                            // ==================== RESET PASSWORD FORM ====================
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Enter the reset code/token you received and your new password.",
+                                    color = textColor.copy(alpha = 0.8f),
+                                    fontSize = 14.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+
+                                OutlinedTextField(
+                                    value = resetToken,
+                                    onValueChange = { resetToken = it },
+                                    label = { Text("Reset Code / Token") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Key,
+                                            contentDescription = "Token",
+                                            tint = textColor.copy(alpha = 0.6f)
+                                        )
+                                    },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = BluePrimary,
+                                        unfocusedBorderColor = textColor.copy(alpha = 0.3f),
+                                        focusedLabelColor = BluePrimary,
+                                        unfocusedLabelColor = textColor.copy(alpha = 0.6f),
+                                        focusedTextColor = textColor,
+                                        unfocusedTextColor = textColor
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = resetNewPassword,
+                                    onValueChange = { resetNewPassword = it },
+                                    label = { Text("New Password") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = "New Password",
+                                            tint = textColor.copy(alpha = 0.6f)
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                            Icon(
+                                                imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                                contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                                                tint = textColor.copy(alpha = 0.6f)
+                                            )
+                                        }
+                                    },
+                                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = BluePrimary,
+                                        unfocusedBorderColor = textColor.copy(alpha = 0.3f),
+                                        focusedLabelColor = BluePrimary,
+                                        unfocusedLabelColor = textColor.copy(alpha = 0.6f),
+                                        focusedTextColor = textColor,
+                                        unfocusedTextColor = textColor
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                OutlinedTextField(
+                                    value = resetConfirmPassword,
+                                    onValueChange = { resetConfirmPassword = it },
+                                    label = { Text("Confirm New Password") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = "Confirm New Password",
+                                            tint = textColor.copy(alpha = 0.6f)
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
+                                            Icon(
+                                                imageVector = if (isConfirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                                contentDescription = if (isConfirmPasswordVisible) "Hide password" else "Show password",
+                                                tint = textColor.copy(alpha = 0.6f)
+                                            )
+                                        }
+                                    },
+                                    visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = BluePrimary,
+                                        unfocusedBorderColor = textColor.copy(alpha = 0.3f),
+                                        focusedLabelColor = BluePrimary,
+                                        unfocusedLabelColor = textColor.copy(alpha = 0.6f),
+                                        focusedTextColor = textColor,
+                                        unfocusedTextColor = textColor
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Button(
+                                    onClick = {
+                                        onResetPasswordClick(
+                                            resetToken,
+                                            resetNewPassword,
+                                            resetConfirmPassword
+                                        )
+                                    },
+                                    enabled = !isLoading,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = BluePrimary
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(50.dp)
+                                ) {
+                                    if (isLoading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "Reset Password",
                                             color = Color.White,
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold

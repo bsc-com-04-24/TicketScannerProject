@@ -175,6 +175,10 @@ fun TicketScannerMainApp(
                     authViewModel.forgotPassword(email)
                 },
 
+                onResetPasswordClick = { token, newPassword, confirmPassword ->
+                    authViewModel.resetPassword(token, newPassword, confirmPassword)
+                },
+
                 onBiometricLoginClick = {
                     if (activity != null) {
                         BiometricHelper.authenticate(

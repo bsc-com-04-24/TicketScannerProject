@@ -26,4 +26,9 @@ interface AuthApi {
         @Body request: ForgotPasswordRequest
     ): Response<Void>
 
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(
+        @Body request: ResetPasswordRequest
+    ): Response<Void>
+
 }

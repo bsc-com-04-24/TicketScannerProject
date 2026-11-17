@@ -122,6 +122,55 @@ class AuthViewModel(
         }
     }
 
+    fun resetPassword(token: String, newPassword: String, confirmPassword: String) {
+        val trimmedToken = token.trim()
+
+        if (trimmedToken.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter the reset token or code.")
+            return
+        }
+
+        if (newPassword.isEmpty()) {
+            uiState = AuthUiState(errorMessage = "Please enter a new password.")
+            return
+        }
+
+        if (newPassword.length < 6) {
+            uiState = AuthUiState(errorMessage = "Password must be at least 6 characters long.")
+            return
+        }
+
+        if (newPassword != confirmPassword) {
+            uiState = AuthUiState(errorMessage = "Passwords do not match.")
+            return
+        }
+
+        viewModelScope.launch {
+            uiState = AuthUiState(isLoading = true)
+
+            try {
+                val response = authRepository.resetPassword(trimmedToken, newPassword)
+
+                if (response.isSuccessful) {
+                    uiState = AuthUiState(
+                        successMessage = "Password successfully reset! Please sign in with your new credentials."
+                    )
+                } else {
+                    val errorMsg = parseErrorMessage(response)
+                    uiState = AuthUiState(errorMessage = errorMsg)
+                }
+            } catch (e: IOException) {
+                uiState = AuthUiState(
+                    errorMessage = "Cannot connect to the server. Check network connection and server status."
+                )
+            } catch (e: Exception) {
+                uiState = AuthUiState(
+                    errorMessage = "Reset error: ${e.message}"
+                )
+            }
+        }
+    }
+
     fun register(
         fullName: String,
         email: String,
