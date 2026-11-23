@@ -39,6 +39,25 @@ data class TicketTypeResponse(
     val quantitySold: Int
 )
 
+data class TicketResponse(
+    val id: Long,
+    val orderId: Long?,
+    val ticketCode: String,
+    val eventId: Long,
+    val eventTitle: String,
+    val venue: String,
+    val location: String,
+    val eventDateTime: String?,
+    val eventStartTime: String?,
+    val eventEndTime: String?,
+    val ticketTypeId: Long,
+    val ticketTypeName: String,
+    val ticketPrice: BigDecimal,
+    val status: String,
+    val issuedAt: String?,
+    val usedAt: String?
+)
+
 data class GenerateTicketsRequest(
     val ticketCodes: List<String>
 )
@@ -60,5 +79,5 @@ interface EventApi {
         @Path("eventId") eventId: Long,
         @Path("ticketTypeId") ticketTypeId: Long,
         @Body request: GenerateTicketsRequest
-    ): Response<List<Any>>
+    ): Response<List<TicketResponse>>
 }
