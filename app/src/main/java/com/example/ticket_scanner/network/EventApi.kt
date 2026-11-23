@@ -39,6 +39,10 @@ data class TicketTypeResponse(
     val quantitySold: Int
 )
 
+data class GenerateTicketsRequest(
+    val ticketCodes: List<String>
+)
+
 interface EventApi {
     @POST("api/events")
     suspend fun createEvent(
@@ -50,4 +54,11 @@ interface EventApi {
         @Path("eventId") eventId: Long,
         @Body request: CreateTicketTypeRequest
     ): Response<TicketTypeResponse>
+
+    @POST("api/tickets/events/{eventId}/ticket-types/{ticketTypeId}/generate")
+    suspend fun generateTickets(
+        @Path("eventId") eventId: Long,
+        @Path("ticketTypeId") ticketTypeId: Long,
+        @Body request: GenerateTicketsRequest
+    ): Response<List<Any>>
 }
