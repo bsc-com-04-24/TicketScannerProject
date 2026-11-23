@@ -2,6 +2,7 @@ package com.example.ticket_scanner.network
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import java.math.BigDecimal
@@ -63,6 +64,9 @@ data class GenerateTicketsRequest(
 )
 
 interface EventApi {
+    @GET("api/events")
+    suspend fun getAllEvents(): Response<List<EventResponse>>
+
     @POST("api/events")
     suspend fun createEvent(
         @Body request: CreateEventRequest
