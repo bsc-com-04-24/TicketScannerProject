@@ -1,5 +1,9 @@
 package com.example.ticket_scanner.model
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 enum class ScanStatus {
     VALID,
     EXPIRED,
@@ -14,10 +18,30 @@ data class ScanItem(
     val attendeeName: String,
     val ticketCode: String,
     val time: String,
+    val timestampMillis: Long = System.currentTimeMillis(),
     val status: ScanStatus,
     val isSynced: Boolean = true,
     val event: String = ""
 )
+
+fun formatRelativeTime(timestampMillis: Long, now: Long = System.currentTimeMillis()): String {
+    val diff = (now - timestampMillis).coerceAtLeast(0L)
+    val seconds = diff / 1000
+    val minutes = seconds / 60
+    val hours = minutes / 60
+    val days = hours / 24
+
+    return when {
+        seconds < 60 -> "Just now"
+        minutes < 60 -> "${minutes}m ago"
+        hours < 24 -> "${hours}h ago"
+        days < 7 -> "${days}d ago"
+        else -> {
+            val sdf = SimpleDateFormat("d MMM, h:mm a", Locale.getDefault())
+            sdf.format(Date(timestampMillis))
+        }
+    }
+}
 
 enum class NotificationType {
     INFO,

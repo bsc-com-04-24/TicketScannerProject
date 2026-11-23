@@ -38,7 +38,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ticket_scanner.model.ScanItem
 import com.example.ticket_scanner.model.ScanStatus
+import com.example.ticket_scanner.model.formatRelativeTime
+import kotlinx.coroutines.delay
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
@@ -83,6 +87,15 @@ fun HistoryScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(HistoryFilter.ALL) }
     var showMenu by remember { mutableStateOf(false) }
+
+    var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000)
+            currentTimeMillis = System.currentTimeMillis()
+        }
+    }
 
     val filteredItems = items.filter { item ->
         val matchesSearch = searchQuery.isBlank() ||
@@ -237,6 +250,7 @@ fun HistoryScreen(
                     items(filteredItems, key = { it.id }) { item ->
                         ScanHistoryCard(
                             scanItem = item,
+                            currentTimeMillis = currentTimeMillis,
                             onDelete = { onDeleteTicket(item.id) }
                         )
                     }
@@ -282,6 +296,7 @@ fun FilterChipItem(
 @Composable
 fun ScanHistoryCard(
     scanItem: ScanItem,
+    currentTimeMillis: Long = System.currentTimeMillis(),
     onDelete: () -> Unit
 ) {
     val (statusColor, statusIcon, statusLabel) = when (scanItem.status) {
@@ -377,7 +392,7 @@ fun ScanHistoryCard(
                 horizontalAlignment = Alignment.End
             ) {
                 Text(
-                    text = scanItem.time,
+                    text = formatRelativeTime(scanItem.timestampMillis, currentTimeMillis),
                     fontSize = 12.sp,
                     color = TextMuted
                 )

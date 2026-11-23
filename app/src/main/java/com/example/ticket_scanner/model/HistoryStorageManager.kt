@@ -17,6 +17,7 @@ object HistoryStorageManager {
                 put("attendeeName", item.attendeeName)
                 put("ticketCode", item.ticketCode)
                 put("time", item.time)
+                put("timestampMillis", item.timestampMillis)
                 put("status", item.status.name)
                 put("isSynced", item.isSynced)
                 put("event", item.event)
@@ -41,12 +42,15 @@ object HistoryStorageManager {
                 } catch (e: Exception) {
                     ScanStatus.VALID
                 }
+                val idStr = obj.optString("id", System.currentTimeMillis().toString())
+                val timestamp = obj.optLong("timestampMillis", idStr.toLongOrNull() ?: System.currentTimeMillis())
                 list.add(
                     ScanItem(
-                        id = obj.optString("id", System.currentTimeMillis().toString()),
+                        id = idStr,
                         attendeeName = obj.optString("attendeeName", ""),
                         ticketCode = obj.optString("ticketCode", ""),
-                        time = obj.optString("time", ""),
+                        time = obj.optString("time", "Just now"),
+                        timestampMillis = timestamp,
                         status = status,
                         isSynced = obj.optBoolean("isSynced", true),
                         event = obj.optString("event", "")
@@ -66,5 +70,15 @@ object HistoryStorageManager {
     fun loadDarkMode(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean(KEY_DARK_MODE, false)
+    }
+
+    fun savePushNotificationsEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("push_notifications_enabled", enabled).apply()
+    }
+
+    fun loadPushNotificationsEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("push_notifications_enabled", true)
     }
 }
