@@ -47,9 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ticket_scanner.model.HistoryStorageManager
 import com.example.ticket_scanner.ui.components.BottomNavBar
 import com.example.ticket_scanner.ui.components.NavTab
 import com.example.ticket_scanner.ui.theme.BlueHeaderBackground
@@ -70,9 +72,10 @@ fun SettingsScreen(
     onCreateAccount: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    var autoSyncEnabled by remember { mutableStateOf(true) }
-    var soundVibrationEnabled by remember { mutableStateOf(true) }
-    var pushNotificationsEnabled by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    var autoSyncEnabled by remember { mutableStateOf(HistoryStorageManager.loadAutoSyncEnabled(context)) }
+    var soundVibrationEnabled by remember { mutableStateOf(HistoryStorageManager.loadSoundVibrationEnabled(context)) }
+    var pushNotificationsEnabled by remember { mutableStateOf(HistoryStorageManager.loadPushNotificationsEnabled(context)) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
 
@@ -121,15 +124,21 @@ fun SettingsScreen(
                     subtitle = "Automatically sync scanned tickets to cloud server",
                     icon = Icons.Default.CloudSync,
                     isChecked = autoSyncEnabled,
-                    onCheckedChange = { autoSyncEnabled = it }
+                    onCheckedChange = { enabled ->
+                        autoSyncEnabled = enabled
+                        HistoryStorageManager.saveAutoSyncEnabled(context, enabled)
+                    }
                 )
 
                 SettingToggleRow(
-                    title = "Haptic & Sound Feedback",
+                    title = "Scan Sound & Haptic Feedback",
                     subtitle = "Vibrate and play chime on ticket verification",
                     icon = Icons.Default.Vibration,
                     isChecked = soundVibrationEnabled,
-                    onCheckedChange = { soundVibrationEnabled = it }
+                    onCheckedChange = { enabled ->
+                        soundVibrationEnabled = enabled
+                        HistoryStorageManager.saveSoundVibrationEnabled(context, enabled)
+                    }
                 )
 
                 SettingToggleRow(
@@ -137,7 +146,10 @@ fun SettingsScreen(
                     subtitle = "Receive alert updates during live event scanning",
                     icon = Icons.Default.Notifications,
                     isChecked = pushNotificationsEnabled,
-                    onCheckedChange = { pushNotificationsEnabled = it }
+                    onCheckedChange = { enabled ->
+                        pushNotificationsEnabled = enabled
+                        HistoryStorageManager.savePushNotificationsEnabled(context, enabled)
+                    }
                 )
 
                 SettingItemRow(

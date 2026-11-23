@@ -81,4 +81,24 @@ object HistoryStorageManager {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getBoolean("push_notifications_enabled", true)
     }
+
+    fun saveSoundVibrationEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("sound_vibration_enabled", enabled).apply()
+    }
+
+    fun loadSoundVibrationEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("sound_vibration_enabled", true)
+    }
+
+    fun saveAutoSyncEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("auto_sync_enabled", enabled).apply()
+    }
+
+    fun loadAutoSyncEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean("auto_sync_enabled", true)
+    }
 }
