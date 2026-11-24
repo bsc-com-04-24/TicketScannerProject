@@ -71,7 +71,7 @@ fun QuantityDialog(
                 OutlinedTextField(
                     value = price,
                     onValueChange = onPriceChange,
-                    label = { Text("Price ($)") },
+                    label = { Text("Price (Mwk)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
