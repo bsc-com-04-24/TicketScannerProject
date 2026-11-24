@@ -234,7 +234,7 @@ object LocalTicketStore {
 
     // --------------------------------------------------------------- helpers
 
-    private fun refresh() {
+    fun refresh() {
         val list = db().readableDatabase
             .query("tickets", null, null, null, null, null, "event_id DESC, ticket_number ASC")
             .use { cursor ->
