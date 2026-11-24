@@ -1,6 +1,7 @@
 package com.example.ticket_scanner.eventcreation.ui
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -216,7 +216,7 @@ internal fun EventFormFields(
                 OutlinedButton(
                     onClick = {
                         val currentMinutes = form.startMinutes ?: 540
-                        android.app.TimePickerDialog(
+                        TimePickerDialog(
                             context,
                             { _, hourOfDay, minute ->
                                 val totalMinutes = hourOfDay * 60 + minute
@@ -248,7 +248,7 @@ internal fun EventFormFields(
                 OutlinedButton(
                     onClick = {
                         val currentMinutes = form.endMinutes ?: 1080
-                        android.app.TimePickerDialog(
+                        TimePickerDialog(
                             context,
                             { _, hourOfDay, minute ->
                                 val totalMinutes = hourOfDay * 60 + minute
