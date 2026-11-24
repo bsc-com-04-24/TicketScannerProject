@@ -1,6 +1,7 @@
 package com.example.ticket_scanner.eventcreation.ui
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -200,35 +200,72 @@ internal fun EventFormFields(
             }
         }
 
-        // Time Selectors
+        // Time Selectors using TimePickerDialog
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            // Start Time Picker
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = "Start: ${form.startMinutes?.let { formatMinutes(it) } ?: "Not set"}",
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Medium
                 )
                 OutlinedButton(
-                    onClick = { onFormChange(form.copy(startMinutes = 540)) }, // 9:00 AM
-                    shape = RoundedCornerShape(8.dp)
+                    onClick = {
+                        val currentMinutes = form.startMinutes ?: 540
+                        TimePickerDialog(
+                            context,
+                            { _, hourOfDay, minute ->
+                                val totalMinutes = hourOfDay * 60 + minute
+                                onFormChange(form.copy(startMinutes = totalMinutes))
+                            },
+                            currentMinutes / 60,
+                            currentMinutes % 60,
+                            false
+                        ).show()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("9:00 AM")
+                    Text("Pick Start Time")
+                }
+                if (errors.startTime != null) {
+                    Text(errors.startTime, color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
                 }
             }
-            Column(modifier = Modifier.weight(1f)) {
+
+            // End Time Picker
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = "End: ${form.endMinutes?.let { formatMinutes(it) } ?: "Not set"}",
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Medium
                 )
                 OutlinedButton(
-                    onClick = { onFormChange(form.copy(endMinutes = 1080)) }, // 6:00 PM
-                    shape = RoundedCornerShape(8.dp)
+                    onClick = {
+                        val currentMinutes = form.endMinutes ?: 1080
+                        TimePickerDialog(
+                            context,
+                            { _, hourOfDay, minute ->
+                                val totalMinutes = hourOfDay * 60 + minute
+                                onFormChange(form.copy(endMinutes = totalMinutes))
+                            },
+                            currentMinutes / 60,
+                            currentMinutes % 60,
+                            false
+                        ).show()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("6:00 PM")
+                    Text("Pick End Time")
+                }
+                if (errors.endTime != null) {
+                    Text(errors.endTime, color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
                 }
             }
         }
