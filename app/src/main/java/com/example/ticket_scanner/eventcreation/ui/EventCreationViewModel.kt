@@ -13,6 +13,7 @@ import com.example.ticket_scanner.localdb.LocalTicketStore
 import com.example.ticket_scanner.localdb.StoredEvent
 import com.example.ticket_scanner.network.CreateEventRequest
 import com.example.ticket_scanner.network.CreateTicketTypeRequest
+import com.example.ticket_scanner.network.GenerateTicketsRequest
 import com.example.ticket_scanner.network.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -139,7 +140,7 @@ class EventCreationViewModel : ViewModel() {
     var saveError by mutableStateOf<String?>(null)
         private set
 
-    /** "Save tickets": store the event and its tickets in the MySQL database via backend API and locally. */
+    /** "Save tickets": store the event, ticket types, and individual tickets in the MySQL database via backend API and locally. */
     fun saveTickets() {
         val current = _step.value as? EventCreationStep.Tickets ?: return
         if (isSaving || isSaved) return
@@ -184,7 +185,7 @@ class EventCreationViewModel : ViewModel() {
                     return@launch
                 }
 
-                // 3. Create ticket type(s) on backend
+                // 3. Create ticket type on backend
                 val priceVal = priceInput.toBigDecimalOrNull() ?: BigDecimal("10.00")
                 val ticketTypeRequest = CreateTicketTypeRequest(
                     name = current.tickets.firstOrNull()?.ticketType ?: "General Admission",
@@ -201,7 +202,30 @@ class EventCreationViewModel : ViewModel() {
                     return@launch
                 }
 
-                // 4. Save locally for offline redundancy
+                val createdTicketType = ticketTypeResponse.body()
+                if (createdTicketType == null) {
+                    saveError = "Backend returned empty ticket type response."
+                    isSaving = false
+                    return@launch
+                }
+
+                // 4. Generate and persist individual tickets on backend for synchronization & scanning
+                val ticketCodes = current.tickets.map { it.code }
+                val generateResponse = RetrofitClient.eventApi.generateTickets(
+                    createdEvent.id,
+                    createdTicketType.id,
+                    GenerateTicketsRequest(ticketCodes)
+                )
+
+                if (!generateResponse.isSuccessful) {
+                    val errCode = generateResponse.code()
+                    val errBody = generateResponse.errorBody()?.string() ?: generateResponse.message()
+                    saveError = "Ticket types saved, but failed to generate individual tickets (HTTP $errCode): $errBody"
+                    isSaving = false
+                    return@launch
+                }
+
+                // 5. Save locally for offline redundancy
                 LocalTicketStore.saveEventWithTickets(current.event, current.tickets)
                 isSaved = true
             } catch (e: Exception) {

@@ -13,6 +13,7 @@ object AuthTokenStore {
     private const val ACCESS_TOKEN_KEY = "access_token"
     private const val REFRESH_TOKEN_KEY = "refresh_token"
     private const val BIOMETRIC_ENABLED_KEY = "biometric_enabled"
+    private const val AUTO_SYNC_ENABLED_KEY = "auto_sync_enabled"
 
     @Volatile
     private var preferences: SharedPreferences? = null
@@ -56,6 +57,12 @@ object AuthTokenStore {
 
     fun setBiometricEnabled(enabled: Boolean) {
         preferences?.edit()?.putBoolean(BIOMETRIC_ENABLED_KEY, enabled)?.apply()
+    }
+
+    fun isAutoSyncEnabled(): Boolean = preferences?.getBoolean(AUTO_SYNC_ENABLED_KEY, true) == true
+
+    fun setAutoSyncEnabled(enabled: Boolean) {
+        preferences?.edit()?.putBoolean(AUTO_SYNC_ENABLED_KEY, enabled)?.apply()
     }
 
     fun save(response: AuthResponse, enableBiometric: Boolean = false) {

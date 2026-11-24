@@ -24,7 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ticket_scanner.model.DownloadedTicket
-import com.example.ticket_scanner.model.DownloadedTicketRepository
+import com.example.ticket_scanner.localdb.LocalTicketStore
 import com.example.ticket_scanner.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -37,7 +37,29 @@ fun DownloadedTicketsScreen(
     isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var tickets by remember { mutableStateOf(DownloadedTicketRepository.getTickets()) }
+    val storedTickets by LocalTicketStore.tickets.collectAsState()
+
+    val tickets = remember(storedTickets) {
+        val now = System.currentTimeMillis()
+        storedTickets.map { stored ->
+            val status = when {
+                stored.checkedInAt != null -> "USED"
+                now > stored.expiresAt -> "EXPIRED"
+                else -> "VALID"
+            }
+            DownloadedTicket(
+                id = stored.code,
+                code = stored.code,
+                type = stored.ticketType,
+                holderName = "Ticket #${stored.ticketNumber} of ${stored.totalTickets}",
+                event = stored.eventName,
+                seatZone = stored.venue,
+                status = status,
+                isSynced = true,
+                lastUpdated = stored.purchasedAt
+            )
+        }
+    }
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatusFilter by remember { mutableStateOf("ALL") }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -72,7 +94,7 @@ fun DownloadedTicketsScreen(
                             coroutineScope.launch {
                                 isRefreshing = true
                                 delay(800)
-                                tickets = DownloadedTicketRepository.refreshAll()
+                                LocalTicketStore.refresh()
                                 isRefreshing = false
                             }
                         }

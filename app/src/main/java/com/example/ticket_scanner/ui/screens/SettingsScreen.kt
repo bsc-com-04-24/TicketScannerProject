@@ -63,6 +63,8 @@ fun SettingsScreen(
     onTabSelected: (NavTab) -> Unit,
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit,
+    autoSyncEnabled: Boolean,
+    onToggleAutoSync: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     onToggleOffline: () -> Unit = {},
     onOpenDownloadedTickets: () -> Unit = {},
@@ -70,7 +72,6 @@ fun SettingsScreen(
     onCreateAccount: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    var autoSyncEnabled by remember { mutableStateOf(true) }
     var soundVibrationEnabled by remember { mutableStateOf(true) }
     var pushNotificationsEnabled by remember { mutableStateOf(true) }
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -121,7 +122,7 @@ fun SettingsScreen(
                     subtitle = "Automatically sync scanned tickets to cloud server",
                     icon = Icons.Default.CloudSync,
                     isChecked = autoSyncEnabled,
-                    onCheckedChange = { autoSyncEnabled = it }
+                    onCheckedChange = onToggleAutoSync
                 )
 
                 SettingToggleRow(
