@@ -1,5 +1,6 @@
 package com.example.ticket_scanner.eventcreation.ui
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,17 +16,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -118,6 +122,8 @@ internal fun EventFormFields(
     onFormChange: (EventForm) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -156,27 +162,75 @@ internal fun EventFormFields(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Text(
-            text = if (form.dateUtcMillis != null) "Date: ${formatPickedDate(form.dateUtcMillis)}" else "Date: Not picked",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Button(
-            onClick = {
-                val calendar = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-                calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
-                calendar.set(java.util.Calendar.MINUTE, 0)
-                calendar.set(java.util.Calendar.SECOND, 0)
-                calendar.set(java.util.Calendar.MILLISECOND, 0)
-                onFormChange(form.copy(dateUtcMillis = calendar.timeInMillis, startMinutes = 540, endMinutes = 1080))
-            },
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text("Set Date & Times (Default Today 9AM - 6PM)")
+        // Date Picker Button
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = if (form.dateUtcMillis != null) "Date: ${formatPickedDate(form.dateUtcMillis)}" else "Date: Not picked",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            OutlinedButton(
+                onClick = {
+                    val initialCalendar = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                    if (form.dateUtcMillis != null) {
+                        initialCalendar.timeInMillis = form.dateUtcMillis
+                    }
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            val picked = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                                clear()
+                                set(year, month, dayOfMonth)
+                            }
+                            onFormChange(form.copy(dateUtcMillis = picked.timeInMillis, startMinutes = 540, endMinutes = 1080))
+                        },
+                        initialCalendar.get(java.util.Calendar.YEAR),
+                        initialCalendar.get(java.util.Calendar.MONTH),
+                        initialCalendar.get(java.util.Calendar.DAY_OF_MONTH)
+                    ).show()
+                },
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (form.dateUtcMillis != null) "Change Event Date" else "Pick Event Date")
+            }
+            if (errors.date != null) {
+                Text(errors.date, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            }
         }
-        if (errors.date != null) {
-            Text(errors.date, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+
+        // Time Selectors
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Start: ${form.startMinutes?.let { formatMinutes(it) } ?: "Not set"}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                OutlinedButton(
+                    onClick = { onFormChange(form.copy(startMinutes = 540)) }, // 9:00 AM
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("9:00 AM")
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "End: ${form.endMinutes?.let { formatMinutes(it) } ?: "Not set"}",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                OutlinedButton(
+                    onClick = { onFormChange(form.copy(endMinutes = 1080)) }, // 6:00 PM
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("6:00 PM")
+                }
+            }
         }
     }
 }

@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -130,6 +134,7 @@ fun TicketScannerMainApp(
     var showTicketResult by remember { mutableStateOf(false) }
     var isVerifying by remember { mutableStateOf(false) }
     var isOfflineMode by remember { mutableStateOf(false) }
+    var showOfflineConfirmDialog by remember { mutableStateOf(false) }
 
     var showDownloadedTickets by remember { mutableStateOf(false) }
     var selectedTicketDetailId by remember { mutableStateOf<String?>(null) }
@@ -163,6 +168,33 @@ fun TicketScannerMainApp(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+
+        if (showOfflineConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showOfflineConfirmDialog = false },
+                title = { Text("Switch to Offline Mode") },
+                text = { Text("You can scan and verify tickets locally using cached device data without an internet connection. Would you like to proceed?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showOfflineConfirmDialog = false
+                            isOfflineMode = true
+                        }
+                    ) {
+                        Text("Enter Offline Mode")
+                    }
+                },
+                dismissButton = {
+                    OutlinedButton(
+                        onClick = {
+                            showOfflineConfirmDialog = false
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
 
         // SPLASH SCREEN
         if (showSplash) {
@@ -410,7 +442,7 @@ fun TicketScannerMainApp(
                                 }
                             },
                             onOpenOfflineMode = {
-                                isOfflineMode = true
+                                showOfflineConfirmDialog = true
                             },
                             onVerifyTicket = { ticketCode ->
                                 isVerifying = true
@@ -569,6 +601,10 @@ fun TicketScannerMainApp(
                             selectedTab = selectedTab,
                             isDarkMode = isDarkMode,
                             onToggleDarkMode = onToggleDarkMode,
+                            autoSyncEnabled = AuthTokenStore.isAutoSyncEnabled(),
+                            onToggleAutoSync = { enabled ->
+                                AuthTokenStore.setAutoSyncEnabled(enabled)
+                            },
                             onTabSelected = { tab ->
                                 selectedTab = tab
                                 coroutineScope.launch {
@@ -576,7 +612,7 @@ fun TicketScannerMainApp(
                                 }
                             },
                             onToggleOffline = {
-                                isOfflineMode = true
+                                showOfflineConfirmDialog = true
                             },
                             onOpenDownloadedTickets = {
                                 showDownloadedTickets = true

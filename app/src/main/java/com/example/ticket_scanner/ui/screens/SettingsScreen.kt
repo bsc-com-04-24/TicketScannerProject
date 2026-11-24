@@ -65,6 +65,8 @@ fun SettingsScreen(
     onTabSelected: (NavTab) -> Unit,
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit,
+    autoSyncEnabled: Boolean,
+    onToggleAutoSync: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     onToggleOffline: () -> Unit = {},
     onOpenDownloadedTickets: () -> Unit = {},
@@ -73,7 +75,6 @@ fun SettingsScreen(
     onLogout: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    var autoSyncEnabled by remember { mutableStateOf(HistoryStorageManager.loadAutoSyncEnabled(context)) }
     var soundVibrationEnabled by remember { mutableStateOf(HistoryStorageManager.loadSoundVibrationEnabled(context)) }
     var pushNotificationsEnabled by remember { mutableStateOf(HistoryStorageManager.loadPushNotificationsEnabled(context)) }
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -125,7 +126,7 @@ fun SettingsScreen(
                     icon = Icons.Default.CloudSync,
                     isChecked = autoSyncEnabled,
                     onCheckedChange = { enabled ->
-                        autoSyncEnabled = enabled
+                        onToggleAutoSync(enabled)
                         HistoryStorageManager.saveAutoSyncEnabled(context, enabled)
                     }
                 )

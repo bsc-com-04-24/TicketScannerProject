@@ -20,41 +20,7 @@ data class DownloadedTicket(
 }
 
 object DownloadedTicketRepository {
-    private val tickets = mutableListOf(
-        DownloadedTicket(
-            id = "1",
-            code = "MTIE-2026-004281",
-            type = "VIP Admission",
-            holderName = "Blessings Chirwa",
-            event = "Malawi Tech & Innovation Expo",
-            seatZone = "Zone A - Row 2, Seat 14",
-            status = "VALID",
-            isSynced = true,
-            lastUpdated = System.currentTimeMillis() - 3600000
-        ),
-        DownloadedTicket(
-            id = "2",
-            code = "MTIE-2026-001150",
-            type = "General Admission",
-            holderName = "Daniel Phiri",
-            event = "Malawi Tech & Innovation Expo",
-            seatZone = "General Standing",
-            status = "EXPIRED",
-            isSynced = true,
-            lastUpdated = System.currentTimeMillis() - 7200000
-        ),
-        DownloadedTicket(
-            id = "3",
-            code = "MTIE-2026-002077",
-            type = "Regular Pass",
-            holderName = "Grace Moyo",
-            event = "Malawi Tech & Innovation Expo",
-            seatZone = "Zone B - Seat 5",
-            status = "USED",
-            isSynced = false,
-            lastUpdated = System.currentTimeMillis() - 1800000
-        )
-    )
+    private val tickets = mutableListOf<DownloadedTicket>()
 
     fun getTickets(): List<DownloadedTicket> = tickets.toList()
 
