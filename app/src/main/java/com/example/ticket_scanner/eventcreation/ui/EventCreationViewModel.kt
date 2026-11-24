@@ -149,84 +149,58 @@ class EventCreationViewModel : ViewModel() {
         saveError = null
         viewModelScope.launch {
             try {
-                // 1. Format start and end times to ISO-8601 for Spring Boot backend
-                val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-                val startTimeStr = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(current.event.startMillis),
-                    ZoneId.systemDefault()
-                ).format(formatter)
-                val endTimeStr = LocalDateTime.ofInstant(
-                    Instant.ofEpochMilli(current.event.endMillis),
-                    ZoneId.systemDefault()
-                ).format(formatter)
-
-                val eventRequest = CreateEventRequest(
-                    title = current.event.name,
-                    venue = current.event.venue,
-                    location = current.event.venue, // fallback to venue
-                    startTime = startTimeStr,
-                    endTime = endTimeStr
-                )
-
-                // 2. Call backend to create event in MySQL database
-                val eventResponse = RetrofitClient.eventApi.createEvent(eventRequest)
-                if (!eventResponse.isSuccessful) {
-                    val errCode = eventResponse.code()
-                    val errBody = eventResponse.errorBody()?.string() ?: eventResponse.message()
-                    saveError = "Failed to save event to database (HTTP $errCode): $errBody"
-                    isSaving = false
-                    return@launch
-                }
-
-                val createdEvent = eventResponse.body()
-                if (createdEvent == null) {
-                    saveError = "Backend returned empty event response."
-                    isSaving = false
-                    return@launch
-                }
-
-                // 3. Create ticket type on backend
-                val priceVal = priceInput.toBigDecimalOrNull() ?: BigDecimal("10.00")
-                val ticketTypeRequest = CreateTicketTypeRequest(
-                    name = current.tickets.firstOrNull()?.ticketType ?: "General Admission",
-                    price = priceVal,
-                    totalQuantity = current.tickets.size
-                )
-
-                val ticketTypeResponse = RetrofitClient.eventApi.createTicketType(createdEvent.id, ticketTypeRequest)
-                if (!ticketTypeResponse.isSuccessful) {
-                    val errCode = ticketTypeResponse.code()
-                    val errBody = ticketTypeResponse.errorBody()?.string() ?: ticketTypeResponse.message()
-                    saveError = "Event created, but failed to save ticket types (HTTP $errCode): $errBody"
-                    isSaving = false
-                    return@launch
-                }
-
-                val createdTicketType = ticketTypeResponse.body()
-                if (createdTicketType == null) {
-                    saveError = "Backend returned empty ticket type response."
-                    isSaving = false
-                    return@launch
-                }
-
-                // 4. Generate and persist individual tickets on backend for synchronization & scanning
-                val ticketCodes = current.tickets.map { it.code }
-                val generateResponse = RetrofitClient.eventApi.generateTickets(
-                    createdEvent.id,
-                    createdTicketType.id,
-                    GenerateTicketsRequest(ticketCodes)
-                )
-
-                if (!generateResponse.isSuccessful) {
-                    val errCode = generateResponse.code()
-                    val errBody = generateResponse.errorBody()?.string() ?: generateResponse.message()
-                    saveError = "Ticket types saved, but failed to generate individual tickets (HTTP $errCode): $errBody"
-                    isSaving = false
-                    return@launch
-                }
-
-                // 5. Save locally for offline redundancy
+                // 1. Save locally first so newly generated tickets are guaranteed to be stored on device
                 LocalTicketStore.saveEventWithTickets(current.event, current.tickets)
+
+                // 2. Try syncing to backend
+                try {
+                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+                    val startTimeStr = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(current.event.startMillis),
+                        ZoneId.systemDefault()
+                    ).format(formatter)
+                    val endTimeStr = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(current.event.endMillis),
+                        ZoneId.systemDefault()
+                    ).format(formatter)
+
+                    val eventRequest = CreateEventRequest(
+                        title = current.event.name,
+                        venue = current.event.venue,
+                        location = current.event.venue,
+                        startTime = startTimeStr,
+                        endTime = endTimeStr
+                    )
+
+                    val eventResponse = RetrofitClient.eventApi.createEvent(eventRequest)
+                    if (eventResponse.isSuccessful) {
+                        val createdEvent = eventResponse.body()
+                        if (createdEvent != null) {
+                            val priceVal = priceInput.toBigDecimalOrNull() ?: BigDecimal("10.00")
+                            val ticketTypeRequest = CreateTicketTypeRequest(
+                                name = current.tickets.firstOrNull()?.ticketType ?: "General Admission",
+                                price = priceVal,
+                                totalQuantity = current.tickets.size
+                            )
+
+                            val ticketTypeResponse = RetrofitClient.eventApi.createTicketType(createdEvent.id, ticketTypeRequest)
+                            if (ticketTypeResponse.isSuccessful) {
+                                val createdTicketType = ticketTypeResponse.body()
+                                if (createdTicketType != null) {
+                                    val ticketCodes = current.tickets.map { it.code }
+                                    RetrofitClient.eventApi.generateTickets(
+                                        createdEvent.id,
+                                        createdTicketType.id,
+                                        GenerateTicketsRequest(ticketCodes)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {
+                    // Backend optional / offline sync fallback
+                }
+
                 isSaved = true
             } catch (e: Exception) {
                 saveError = "Could not save the tickets: ${e.message}"

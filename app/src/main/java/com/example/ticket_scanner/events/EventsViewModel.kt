@@ -31,7 +31,8 @@ class EventsViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.eventApi.getAllEvents()
                 if (response.isSuccessful) {
-                    events = response.body() ?: emptyList()
+                    val rawEvents = response.body() ?: emptyList()
+                    events = rawEvents.sortedByDescending { it.id }
                 } else {
                     errorMessage = "Failed to load events (${response.code()})"
                 }
